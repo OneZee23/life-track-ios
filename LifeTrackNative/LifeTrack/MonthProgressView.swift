@@ -1,0 +1,186 @@
+import SwiftUI
+
+struct MonthProgressView: View {
+    @EnvironmentObject var store: AppStore
+
+    let year: Int
+    let month: Int
+    let filterHabitId: String?
+    let onMonthChange: (Int) -> Void
+    let onDayTap: (Date) -> Void
+
+    private var now: Date { Date() }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            // Nav header
+            HStack {
+                navArrow(left: true) { onMonthChange(month - 1) }
+                Spacer()
+                VStack(spacing: 2) {
+                    Text(verbatim: "\(monthsFullRu[month]) \(String(year))")
+                        .font(.system(size: 17, weight: .bold))
+                }
+                Spacer()
+                navArrow(left: false) { onMonthChange(month + 1) }
+            }
+
+            // Calendar grid
+            calendarGrid
+
+            // Streaks
+            streakCards
+        }
+    }
+
+    // MARK: - Calendar
+
+    var calendarGrid: some View {
+        let cells = buildCells()
+        let rows = stride(from: 0, to: cells.count, by: 7).map {
+            Array(cells[$0..<min($0 + 7, cells.count)])
+        }
+
+        return VStack(spacing: 4) {
+            // Weekday headers
+            HStack(spacing: 4) {
+                ForEach(weekdaysShortRu, id: \.self) { wd in
+                    Text(wd)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // Day cells
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 4) {
+                    ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
+                        if let cell = cell {
+                            dayCell(cell: cell)
+                        } else {
+                            Color.clear.frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
+    }
+
+    @ViewBuilder
+    func dayCell(cell: MonthCell) -> some View {
+        let today = isToday(cell.date)
+        let isDone: Bool = {
+            if let s = cell.status { return s != .none }
+            return false
+        }()
+
+        Button {
+            onDayTap(cell.date)
+        } label: {
+            ZStack {
+                if today {
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color(UIColor.systemGreen), lineWidth: 2)
+                        .modifier(PulseModifier())
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                }
+
+                Text("\(cell.day)")
+                    .font(.system(size: 12, weight: today ? .bold : .medium))
+                    .foregroundColor(
+                        today
+                            ? Color(UIColor.systemGreen)
+                            : (isDone ? .white : Color(UIColor.systemGray3))
+                    )
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
+        }
+        .buttonStyle(SpringButtonStyle())
+        .disabled(cell.date > now && !today)
+    }
+
+    // MARK: - Streaks
+
+    var streakCards: some View {
+        let best = store.bestStreak(year: year, month: month, habitId: filterHabitId)
+        let cur = store.currentStreak(year: year, month: month, habitId: filterHabitId)
+        return HStack(spacing: 8) {
+            streakCard(label: "Лучшая серия", value: best)
+            streakCard(label: "Текущая серия", value: cur)
+        }
+    }
+
+    func streakCard(label: String, value: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+            HStack(alignment: .bottom, spacing: 4) {
+                Text("\(value)")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundColor(Color(UIColor.systemGreen))
+                Text(pluralDays(value))
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
+    }
+
+    // MARK: - Nav
+
+    func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(UIColor.systemGray5))
+                    .frame(width: 32, height: 32)
+                Image(systemName: left ? "chevron.left" : "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+        }
+    }
+
+    // MARK: - Data
+
+    func buildCells() -> [MonthCell?] {
+        let days = daysInMonth(year: year, month: month)
+        let firstDow = weekdayIndex(makeDate(year: year, month: month, day: 1)!)
+        var cells: [MonthCell?] = Array(repeating: nil, count: firstDow)
+
+        for day in 1...days {
+            guard let d = makeDate(year: year, month: month, day: day) else { continue }
+            let ds = formatDate(d)
+            let status: DayStatus? = (isFuture(d) && !isToday(d))
+                ? nil
+                : store.dayStatus(date: ds, habitId: filterHabitId)
+            cells.append(MonthCell(day: day, date: d, status: status))
+        }
+        while cells.count % 7 != 0 { cells.append(nil) }
+        return cells
+    }
+}
+
+struct MonthCell {
+    let day: Int
+    let date: Date
+    let status: DayStatus?
+}
