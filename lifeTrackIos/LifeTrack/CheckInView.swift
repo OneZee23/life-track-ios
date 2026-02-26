@@ -6,6 +6,7 @@ struct CheckInView: View {
     @State private var saved = false
     @State private var showSettings = false
     @State private var showCelebration = false
+    @State private var showConfetti = false
 
     private var dateStr: String { formatDate(yesterday()) }
     private var doneCount: Int { values.values.filter { $0 }.count }
@@ -30,6 +31,11 @@ struct CheckInView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
+            }
+
+            if showConfetti {
+                ConfettiView()
+                    .ignoresSafeArea()
             }
         }
         .onAppear { initValues() }
@@ -224,6 +230,7 @@ struct CheckInView: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                     saved = false
                     showCelebration = false
+                    showConfetti = false
                 }
             } label: {
                 HStack(spacing: 4) {
@@ -267,6 +274,7 @@ struct CheckInView: View {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             withAnimation { showCelebration = true }
+            showConfetti = true
         }
     }
 }

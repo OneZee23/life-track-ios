@@ -22,6 +22,7 @@
 		AA00000000000000000000BD /* HabitsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000AD /* HabitsView.swift */; };
 		AA00000000000000000000BE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000AE /* SettingsView.swift */; };
 		AA00000000000000000000BF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000AF /* Assets.xcassets */; };
+		AA00000000000000000000D2 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D1 /* ConfettiView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		AA00000000000000000000AD /* HabitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitsView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000AE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000AF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA00000000000000000000D1 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000C0 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		AA00000000000000000000C1 /* LifeTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LifeTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -88,6 +90,7 @@
 				AA00000000000000000000AC /* DayProgressView.swift */,
 				AA00000000000000000000AD /* HabitsView.swift */,
 				AA00000000000000000000AE /* SettingsView.swift */,
+				AA00000000000000000000D1 /* ConfettiView.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -185,6 +188,7 @@
 				AA00000000000000000000BC /* DayProgressView.swift in Sources */,
 				AA00000000000000000000BD /* HabitsView.swift in Sources */,
 				AA00000000000000000000BE /* SettingsView.swift in Sources */,
+				AA00000000000000000000D2 /* ConfettiView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
