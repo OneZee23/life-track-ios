@@ -33,6 +33,23 @@ struct CheckInView: View {
                 .padding(.bottom, 40)
             }
 
+            // Fixed gear button — always pinned top-right, never moves
+            HStack {
+                Spacer()
+                Button { showSettings = true } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(UIColor.systemGray5))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.top, 16)
+            .padding(.horizontal, 16)
+
             if showConfetti {
                 ConfettiView()
                     .ignoresSafeArea()
@@ -48,7 +65,7 @@ struct CheckInView: View {
 
     var checkInContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
+            // Header (gear button is in the ZStack overlay, placeholder keeps layout)
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Чек-ин")
@@ -59,19 +76,7 @@ struct CheckInView: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                Button {
-                    showSettings = true
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(UIColor.systemGray5))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.top, 4)
+                Color.clear.frame(width: 36, height: 36)
             }
             .padding(.top, 16)
             .padding(.bottom, 20)
@@ -142,22 +147,8 @@ struct CheckInView: View {
 
     var savedContent: some View {
         VStack(spacing: 0) {
-            // Settings button
-            HStack {
-                Spacer()
-                Button { showSettings = true } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(UIColor.systemGray5))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+            // Placeholder matching the height of the overlay gear button row
+            Color.clear.frame(height: 68)
 
             // Celebration
             ZStack {

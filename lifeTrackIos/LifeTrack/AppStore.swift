@@ -2,13 +2,23 @@ import Foundation
 import SwiftUI
 
 class AppStore: ObservableObject {
-    @Published var habits: [Habit] = []
+    @Published var habits: [Habit] = [] {
+        didSet { _activeHabitIds = nil }
+    }
     @Published var checkins: [String: [String: Int]] = [:]  // date -> habitId -> 0|1
     @Published var isDark: Bool = false
 
     private let habitsKey = "lt_habits_v1"
     private let checkinsKey = "lt_checkins_v1"
     private let themeKey = "lt_isDark"
+
+    private var _activeHabitIds: Set<String>?
+    private var activeHabitIds: Set<String> {
+        if let cached = _activeHabitIds { return cached }
+        let ids = Set(habits.lazy.filter { !$0.isDeleted }.map { $0.id })
+        _activeHabitIds = ids
+        return ids
+    }
 
     var activeHabits: [Habit] {
         habits.filter { !$0.isDeleted }.sorted { $0.sortOrder < $1.sortOrder }
@@ -41,7 +51,7 @@ class AppStore: ObservableObject {
 
         guard let dayData = checkins[date], !dayData.isEmpty else { return nil }
 
-        let relevantIds = Set(allHabits.map { $0.id })
+        let relevantIds = activeHabitIds
         let relevant = dayData.filter { relevantIds.contains($0.key) }
         guard !relevant.isEmpty else { return nil }
 

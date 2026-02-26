@@ -99,16 +99,16 @@ struct YearProgressView: View {
                         .foregroundColor(.secondary)
                 }
 
-                // Mini heatmap
+                // Calendar grid
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7),
-                    spacing: 2
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 7),
+                    spacing: 3
                 ) {
                     // Weekday headers
-                    ForEach(weekdaysShortRu.prefix(7), id: \.self) { wd in
-                        Text(String(wd.prefix(1)))
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundColor(Color(UIColor.systemGray4))
+                    ForEach(weekdaysShortRu, id: \.self) { wd in
+                        Text(wd)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity)
                     }
                     // Cells
@@ -141,18 +141,30 @@ struct YearProgressView: View {
     func heatmapCell(cell: HeatmapCell?, compact: Bool) -> some View {
         if let cell = cell {
             let today = isToday(cell.date)
-            RoundedRectangle(cornerRadius: compact ? 2 : 6)
-                .fill(today ? Color.clear : cellBackground(status: cell.status))
-                .aspectRatio(1, contentMode: .fit)
-                .overlay(
-                    Group {
-                        if today {
-                            RoundedRectangle(cornerRadius: compact ? 2 : 6)
-                                .strokeBorder(Color(UIColor.systemGreen), lineWidth: 1.5)
-                                .modifier(PulseModifier())
-                        }
-                    }
-                )
+            let isDone: Bool = {
+                if let s = cell.status { return s != .none }
+                return false
+            }()
+            let day = Calendar.current.component(.day, from: cell.date)
+
+            ZStack {
+                if today {
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color(UIColor.systemGreen), lineWidth: 1.5)
+                        .modifier(PulseModifier())
+                } else {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                }
+                Text("\(day)")
+                    .font(.system(size: 10, weight: today ? .bold : .medium))
+                    .foregroundColor(
+                        today
+                            ? Color(UIColor.systemGreen)
+                            : (isDone ? .white : Color(UIColor.systemGray3))
+                    )
+            }
+            .aspectRatio(1, contentMode: .fit)
         } else {
             Color.clear
                 .aspectRatio(1, contentMode: .fit)
