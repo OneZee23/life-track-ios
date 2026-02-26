@@ -20,7 +20,7 @@
 ### Шаг 2 — Заменить файлы
 
 1. В Xcode удали `ContentView.swift` (Move to Trash)
-2. **Drag & Drop** все `.swift` файлы из папки `LifeTrackNative/LifeTrack/` в Xcode:
+2. **Drag & Drop** все `.swift` файлы из папки `lifeTrackIos/LifeTrack/` в Xcode:
    - `Models.swift`
    - `AppStore.swift`
    - `DateUtils.swift`

@@ -1,5 +1,5 @@
 SCHEME       = LifeTrack
-PROJECT_DIR  = LifeTrackNative
+PROJECT_DIR  = lifeTrackIos
 XCODEPROJ    = $(PROJECT_DIR)/LifeTrack.xcodeproj
 ARCHIVE_PATH = $(PROJECT_DIR)/build/LifeTrack.xcarchive
 EXPORT_PATH  = $(PROJECT_DIR)/build/export

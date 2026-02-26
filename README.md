@@ -108,7 +108,7 @@ Backend:     None (local-only)
 
 ```
 life-track-ios/
-├── LifeTrackNative/
+├── lifeTrackIos/
 │   ├── LifeTrack/
 │   │   ├── LifeTrackApp.swift          # @main entry point
 │   │   ├── ContentView.swift           # TabView (3 tabs)
@@ -149,7 +149,7 @@ life-track-ios/
 git clone https://github.com/OneZee23/life-track-ios.git
 cd life-track-ios
 
-make open          # opens LifeTrackNative/LifeTrack.xcodeproj in Xcode
+make open          # opens lifeTrackIos/LifeTrack.xcodeproj in Xcode
 ```
 
 Then in Xcode:
