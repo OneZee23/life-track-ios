@@ -68,10 +68,10 @@ struct CheckInView: View {
             // Header (gear button is in the ZStack overlay, placeholder keeps layout)
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Чек-ин")
+                    Text(L10n.checkIn)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.primary)
-                    Text("Вчера, \(yesterdayLabel())")
+                    Text("\(L10n.yesterdayPrefix), \(L10n.yesterdayLabel())")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -129,7 +129,7 @@ struct CheckInView: View {
             Button {
                 saveChekin()
             } label: {
-                Text("Готово ✓")
+                Text(L10n.doneButton)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -163,11 +163,11 @@ struct CheckInView: View {
             .animation(.spring(response: 0.45, dampingFraction: 0.6), value: showCelebration)
             .padding(.bottom, 16)
 
-            Text("День записан!")
+            Text(L10n.daySaved)
                 .font(.system(size: 24, weight: .bold))
                 .padding(.bottom, 6)
 
-            Text("Возвращайся завтра")
+            Text(L10n.comeBackTomorrow)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 28)
@@ -183,7 +183,7 @@ struct CheckInView: View {
                         .foregroundColor(.secondary)
                         .padding(.bottom, 10)
                 }
-                Text("привычек выполнено")
+                Text(L10n.habitsCompleted)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -227,7 +227,7 @@ struct CheckInView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.system(size: 12, weight: .medium))
-                    Text("Изменить")
+                    Text(L10n.editCheckin)
                         .font(.system(size: 13, weight: .medium))
                 }
                 .foregroundColor(.secondary)
@@ -245,6 +245,7 @@ struct CheckInView: View {
             newValues[habit.id] = store.checkinValue(habitId: habit.id, date: dateStr) == 1
         }
         values = newValues
+        showConfetti = false
         if store.checkins[dateStr] != nil {
             saved = true
             showCelebration = true
@@ -266,6 +267,9 @@ struct CheckInView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             withAnimation { showCelebration = true }
             showConfetti = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+            showConfetti = false
         }
     }
 }

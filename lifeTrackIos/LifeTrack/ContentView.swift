@@ -7,17 +7,17 @@ struct ContentView: View {
         TabView {
             CheckInView()
                 .tabItem {
-                    Label("Чек-ин", systemImage: "checkmark.seal.fill")
+                    Label(L10n.tabCheckIn, systemImage: "checkmark.seal.fill")
                 }
 
             ProgressRootView()
                 .tabItem {
-                    Label("Прогресс", systemImage: "chart.bar.fill")
+                    Label(L10n.tabProgress, systemImage: "chart.bar.fill")
                 }
 
             HabitsView()
                 .tabItem {
-                    Label("Привычки", systemImage: "list.bullet.clipboard.fill")
+                    Label(L10n.tabHabits, systemImage: "list.bullet.clipboard.fill")
                 }
         }
         .tint(Color(UIColor.systemGreen))

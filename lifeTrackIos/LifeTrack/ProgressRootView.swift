@@ -89,18 +89,18 @@ struct ProgressRootView: View {
         VStack(alignment: .leading, spacing: 0) {
             if level == .year || level == .month {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Прогресс")
+                    Text(L10n.progress)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.primary)
 
-                    // Segment control: Месяц / Год
+                    // Segment control
                     HStack(spacing: 0) {
-                        segButton(title: "Месяц", selected: topLevel == .month) {
+                        segButton(title: L10n.month, selected: topLevel == .month) {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 topLevel = .month; level = .month
                             }
                         }
-                        segButton(title: "Год", selected: topLevel == .year) {
+                        segButton(title: L10n.year, selected: topLevel == .year) {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 topLevel = .year; level = .year
                             }
@@ -128,8 +128,8 @@ struct ProgressRootView: View {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 16, weight: .semibold))
                             Text(level == .week
-                                 ? monthsFullRu[navMonth]
-                                 : "Неделя")
+                                 ? L10n.monthsFull[navMonth]
+                                 : L10n.week)
                             .font(.system(size: 16, weight: .medium))
                         }
                         .foregroundColor(Color(UIColor.systemBlue))
@@ -148,7 +148,7 @@ struct ProgressRootView: View {
     var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                chipButton(label: "Все", active: filterHabitId == nil) {
+                chipButton(label: L10n.all, active: filterHabitId == nil) {
                     withAnimation { filterHabitId = nil }
                 }
                 ForEach(store.activeHabits) { habit in

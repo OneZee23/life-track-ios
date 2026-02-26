@@ -18,7 +18,7 @@ struct MonthProgressView: View {
                 navArrow(left: true) { onMonthChange(month - 1) }
                 Spacer()
                 VStack(spacing: 2) {
-                    Text(verbatim: "\(monthsFullRu[month]) \(String(year))")
+                    Text(verbatim: "\(L10n.monthsFull[month]) \(String(year))")
                         .font(.system(size: 17, weight: .bold))
                 }
                 Spacer()
@@ -44,7 +44,7 @@ struct MonthProgressView: View {
         return VStack(spacing: 4) {
             // Weekday headers
             HStack(spacing: 4) {
-                ForEach(weekdaysShortRu, id: \.self) { wd in
+                ForEach(L10n.weekdaysShort, id: \.self) { wd in
                     Text(wd)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
@@ -114,8 +114,8 @@ struct MonthProgressView: View {
         let best = store.bestStreak(year: year, month: month, habitId: filterHabitId)
         let cur = store.currentStreak(year: year, month: month, habitId: filterHabitId)
         return HStack(spacing: 8) {
-            streakCard(label: "Лучшая серия", value: best)
-            streakCard(label: "Текущая серия", value: cur)
+            streakCard(label: L10n.bestStreak, value: best)
+            streakCard(label: L10n.currentStreak, value: cur)
         }
     }
 
@@ -129,7 +129,7 @@ struct MonthProgressView: View {
                 Text("\(value)")
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundColor(Color(UIColor.systemGreen))
-                Text(pluralDays(value))
+                Text(L10n.pluralDays(value))
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .padding(.bottom, 4)

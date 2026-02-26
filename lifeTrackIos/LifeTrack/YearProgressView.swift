@@ -43,8 +43,8 @@ struct YearProgressView: View {
     var yearSummary: some View {
         let (doneDays, trackedDays) = computeYearTotals()
         return HStack(spacing: 8) {
-            summaryCard(label: "Выполнено", value: doneDays, color: Color(UIColor.systemGreen))
-            summaryCard(label: "Затрекано", value: trackedDays, color: .primary)
+            summaryCard(label: L10n.completed, value: doneDays, color: Color(UIColor.systemGreen))
+            summaryCard(label: L10n.tracked, value: trackedDays, color: .primary)
         }
     }
 
@@ -58,7 +58,7 @@ struct YearProgressView: View {
                 Text("\(value)")
                     .font(.system(size: 24, weight: .black, design: .rounded))
                     .foregroundColor(color)
-                Text(pluralDays(value))
+                Text(L10n.pluralDays(value))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .padding(.bottom, 3)
@@ -86,7 +86,7 @@ struct YearProgressView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     HStack(spacing: 8) {
-                        Text(monthsFullRu[month])
+                        Text(L10n.monthsFull[month])
                             .font(.system(size: 15, weight: .bold))
                             .foregroundColor(isCurrentMonth ? Color(UIColor.systemGreen) : .primary)
                         if let pct = pct {
@@ -105,7 +105,7 @@ struct YearProgressView: View {
                     spacing: 3
                 ) {
                     // Weekday headers
-                    ForEach(weekdaysShortRu, id: \.self) { wd in
+                    ForEach(L10n.weekdaysShort, id: \.self) { wd in
                         Text(wd)
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.secondary)
@@ -175,13 +175,13 @@ struct YearProgressView: View {
 
     var legend: some View {
         HStack(spacing: 16) {
-            legendItem(color: Color(UIColor.systemGreen), label: "Выполнено")
-            legendItem(color: Color(UIColor.systemGray5), label: "Пропуск")
+            legendItem(color: Color(UIColor.systemGreen), label: L10n.completed)
+            legendItem(color: Color(UIColor.systemGray5), label: L10n.missed)
             HStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 2)
                     .strokeBorder(Color(UIColor.systemGreen), lineWidth: 1.5)
                     .frame(width: 8, height: 8)
-                Text("Сегодня")
+                Text(L10n.today)
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
