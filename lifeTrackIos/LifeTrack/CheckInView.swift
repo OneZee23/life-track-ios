@@ -10,6 +10,11 @@ struct CheckInView: View {
     @State private var selectedDay: SelectedDay = .yesterday
     @State private var showSettings = false
     @State private var showConfetti = false
+    @State private var showCelebration = false
+    @State private var celebrationStreak = 0
+    @State private var celebrationMessage = ""
+    @State private var hideWork: DispatchWorkItem?
+    @State private var confettiWork: DispatchWorkItem?
 
     private var dateStr: String {
         switch selectedDay {
@@ -60,12 +65,41 @@ struct CheckInView: View {
             .padding(.top, 16)
             .padding(.horizontal, 16)
 
+            // Celebration overlay — blocks all touches behind it
+            if showCelebration {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .contentShape(Rectangle())
+
+                VStack(spacing: 10) {
+                    Text(celebrationMessage)
+                        .font(.system(size: 46, weight: .heavy, design: .rounded))
+                        .shadow(color: .green.opacity(0.3), radius: 24, x: 0, y: 6)
+                    if celebrationStreak >= 2 {
+                        Text("🔥 \(celebrationStreak) \(L10n.pluralDays(celebrationStreak)) \(L10n.inARow)")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(UIColor.systemOrange))
+                    }
+                }
+                .multilineTextAlignment(.center)
+                .transition(.scale(scale: 0.5).combined(with: .opacity))
+                .allowsHitTesting(false)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Confetti on top of everything
             if showConfetti {
                 ConfettiView()
                     .ignoresSafeArea()
+                    .allowsHitTesting(false)
             }
         }
-        .onAppear { showConfetti = false }
+        .onAppear {
+            showConfetti = false
+            showCelebration = false
+        }
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
@@ -138,60 +172,66 @@ struct CheckInView: View {
         }
     }
 
-    // MARK: - Day Selector
+    // MARK: - Day Selector (sliding)
+
+    @Namespace private var daySelector
 
     private var daySelectorView: some View {
         HStack(spacing: 0) {
-            dayPill(
+            dayTab(
+                emoji: "🌙",
                 label: L10n.yesterdayPrefix,
                 sublabel: L10n.dateLabel(for: yesterday()),
                 isSelected: selectedDay == .yesterday
             ) {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     selectedDay = .yesterday
                 }
             }
 
-            dayPill(
+            dayTab(
+                emoji: "☀️",
                 label: L10n.today,
                 sublabel: L10n.dateLabel(for: Date()),
                 isSelected: selectedDay == .today
             ) {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     selectedDay = .today
                 }
             }
         }
-        .padding(4)
+        .padding(3)
         .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.systemGray5))
+            Capsule()
+                .fill(Color(UIColor.systemGray5).opacity(0.8))
         )
     }
 
-    private func dayPill(
+    private func dayTab(
+        emoji: String,
         label: String,
         sublabel: String,
         isSelected: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: 2) {
-                Text(label)
-                    .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
-                Text(sublabel)
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(isSelected ? .primary.opacity(0.7) : .secondary)
+            HStack(spacing: 5) {
+                Text(emoji)
+                    .font(.system(size: 14))
+                    .opacity(isSelected ? 1 : 0.5)
+                Text("\(label), \(sublabel)")
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
             }
             .foregroundColor(isSelected ? .primary : .secondary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(
                 Group {
                     if isSelected {
-                        RoundedRectangle(cornerRadius: 10)
+                        Capsule()
                             .fill(Color(UIColor.secondarySystemGroupedBackground))
-                            .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+                            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 1)
+                            .matchedGeometryEffect(id: "daySlider", in: daySelector)
                     }
                 }
             )
@@ -217,14 +257,42 @@ struct CheckInView: View {
     }
 
     private func triggerCelebration() {
+        // Cancel any pending hide timers from previous celebration
+        hideWork?.cancel()
+        confettiWork?.cancel()
+
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        // Reset confetti to allow re-trigger
-        showConfetti = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            showConfetti = true
+
+        // Calculate streak: currentStreak() counts from yesterday backwards.
+        // Add +1 for today if today is fully done.
+        let baseStreak = store.currentStreak()
+        let todayStr = formatDate(Date())
+        let todayAllDone = store.activeHabits.allSatisfy {
+            store.checkinValue(habitId: $0.id, date: todayStr) == 1
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.05) {
+        celebrationStreak = todayAllDone ? baseStreak + 1 : baseStreak
+        celebrationMessage = L10n.randomCongrats()
+
+        // Fresh start
+        showConfetti = true
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
+            showCelebration = true
+        }
+
+        // Schedule smooth fade out
+        let hide = DispatchWorkItem { [self] in
+            withAnimation(.easeInOut(duration: 1.2)) {
+                showCelebration = false
+            }
+        }
+        hideWork = hide
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: hide)
+
+        // Schedule confetti cleanup
+        let confetti = DispatchWorkItem { [self] in
             showConfetti = false
         }
+        confettiWork = confetti
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: confetti)
     }
 }

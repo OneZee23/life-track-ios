@@ -6,11 +6,14 @@ class AppStore: ObservableObject {
         didSet { _activeHabitIds = nil }
     }
     @Published var checkins: [String: [String: Int]] = [:]  // date -> habitId -> 0|1
-    @Published var isDark: Bool = false
+    @Published var themeMode: String = "auto"  // "auto" | "light" | "dark"
+    @Published var lang: String = "auto"       // "auto" | "ru" | "en"
 
     private let habitsKey = "lt_habits_v1"
     private let checkinsKey = "lt_checkins_v1"
-    private let themeKey = "lt_isDark"
+    private let themeKey = "lt_theme"
+    private let legacyThemeKey = "lt_isDark"
+    private let langKey = "lt_lang"
 
     private var _activeHabitIds: Set<String>?
     private var activeHabitIds: Set<String> {
@@ -168,9 +171,33 @@ class AppStore: ObservableObject {
 
     // MARK: - Theme
 
-    func toggleDark() {
-        isDark.toggle()
+    var preferredColorScheme: ColorScheme? {
+        switch themeMode {
+        case "light": return .light
+        case "dark":  return .dark
+        default:      return nil  // follow system
+        }
+    }
+
+    func setTheme(_ mode: String) {
+        themeMode = mode
         save()
+    }
+
+    // MARK: - Language
+
+    func setLanguage(_ value: String) {
+        lang = value
+        applyLanguage()
+        save()
+    }
+
+    private func applyLanguage() {
+        switch lang {
+        case "ru": L10n.isRu = true
+        case "en": L10n.isRu = false
+        default:   L10n.isRu = Locale.current.language.languageCode?.identifier == "ru"
+        }
     }
 
     // MARK: - Persistence
@@ -182,7 +209,8 @@ class AppStore: ObservableObject {
         if let d = try? JSONEncoder().encode(checkins) {
             UserDefaults.standard.set(d, forKey: checkinsKey)
         }
-        UserDefaults.standard.set(isDark, forKey: themeKey)
+        UserDefaults.standard.set(themeMode, forKey: themeKey)
+        UserDefaults.standard.set(lang, forKey: langKey)
     }
 
     private func load() {
@@ -194,7 +222,15 @@ class AppStore: ObservableObject {
            let v = try? JSONDecoder().decode([String: [String: Int]].self, from: d) {
             checkins = v
         }
-        isDark = UserDefaults.standard.bool(forKey: themeKey)
+        // Theme: migrate from legacy isDark bool
+        if let saved = UserDefaults.standard.string(forKey: themeKey) {
+            themeMode = saved
+        } else if UserDefaults.standard.object(forKey: legacyThemeKey) != nil {
+            themeMode = UserDefaults.standard.bool(forKey: legacyThemeKey) ? "dark" : "light"
+            UserDefaults.standard.removeObject(forKey: legacyThemeKey)
+        }
+        lang = UserDefaults.standard.string(forKey: langKey) ?? "auto"
+        applyLanguage()
     }
 
     private func seedDefaults() {

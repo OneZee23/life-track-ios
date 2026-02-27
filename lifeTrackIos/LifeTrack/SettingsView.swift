@@ -3,42 +3,37 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var store: AppStore
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+
+    private var resolvedIsDark: Bool {
+        switch store.themeMode {
+        case "light": return false
+        case "dark":  return true
+        default:      return colorScheme == .dark
+        }
+    }
 
     var body: some View {
         NavigationView {
             List {
                 // Внешний вид
                 Section {
-                    DayNightSceneView(isDark: store.isDark)
+                    DayNightSceneView(isDark: resolvedIsDark)
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    Toggle(isOn: Binding(
-                        get: { store.isDark },
-                        set: { _ in
-                            withAnimation(.easeInOut(duration: 0.4)) {
-                                store.toggleDark()
-                            }
-                        }
-                    )) {
-                        Label {
-                            Text(L10n.darkTheme)
-                        } icon: {
-                            ZStack {
-                                if store.isDark {
-                                    Image(systemName: "moon.fill")
-                                        .foregroundColor(.indigo)
-                                        .transition(.scale(scale: 0.4).combined(with: .opacity))
-                                } else {
-                                    Image(systemName: "sun.max.fill")
-                                        .foregroundColor(.orange)
-                                        .transition(.scale(scale: 0.4).combined(with: .opacity))
-                                }
-                            }
-                            .animation(.spring(response: 0.35, dampingFraction: 0.65), value: store.isDark)
-                        }
-                    }
-                    .tint(Color(UIColor.systemGreen))
+                    themeRow(value: "auto", label: L10n.themeAuto, icon: "circle.lefthalf.filled")
+                    themeRow(value: "light", label: L10n.themeLight, icon: "sun.max.fill", iconColor: .orange)
+                    themeRow(value: "dark", label: L10n.themeDark, icon: "moon.fill", iconColor: .indigo)
                 } header: {
                     Text(L10n.appearance)
+                }
+
+                // Language
+                Section {
+                    languageRow(value: "auto", label: L10n.languageAuto, icon: "globe")
+                    languageRow(value: "ru", label: "Русский", icon: "🇷🇺")
+                    languageRow(value: "en", label: "English", icon: "🇬🇧")
+                } header: {
+                    Text(L10n.language)
                 }
 
                 // About
@@ -121,7 +116,60 @@ struct SettingsView: View {
                 }
             }
         }
-        .preferredColorScheme(store.isDark ? .dark : .light)
+    }
+
+    @ViewBuilder
+    func themeRow(value: String, label: String, icon: String, iconColor: Color = .secondary) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.4)) {
+                store.setTheme(value)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(iconColor)
+                    .frame(width: 24)
+                Text(label)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                if store.themeMode == value {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color(UIColor.systemGreen))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    func languageRow(value: String, label: String, icon: String) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                store.setLanguage(value)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                if icon.count <= 2 && icon.unicodeScalars.allSatisfy({ $0.properties.isEmoji }) {
+                    Text(icon).font(.system(size: 20))
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                        .frame(width: 24)
+                }
+                Text(label)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                if store.lang == value {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color(UIColor.systemGreen))
+                }
+            }
+        }
     }
 
     @ViewBuilder

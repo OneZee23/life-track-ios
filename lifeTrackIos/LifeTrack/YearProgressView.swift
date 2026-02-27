@@ -150,7 +150,9 @@ struct YearProgressView: View {
             ZStack {
                 if today {
                     RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(Color(UIColor.systemGreen), lineWidth: 1.5)
+                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
                         .modifier(PulseModifier())
                 } else {
                     RoundedRectangle(cornerRadius: 6)
@@ -160,7 +162,7 @@ struct YearProgressView: View {
                     .font(.system(size: 10, weight: today ? .bold : .medium))
                     .foregroundColor(
                         today
-                            ? Color(UIColor.systemGreen)
+                            ? (isDone ? .white : Color(UIColor.systemOrange))
                             : (isDone ? .white : Color(UIColor.systemGray3))
                     )
             }
@@ -179,7 +181,7 @@ struct YearProgressView: View {
             legendItem(color: Color(UIColor.systemGray5), label: L10n.missed)
             HStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 2)
-                    .strokeBorder(Color(UIColor.systemGreen), lineWidth: 1.5)
+                    .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
                     .frame(width: 8, height: 8)
                 Text(L10n.today)
                     .font(.system(size: 10))

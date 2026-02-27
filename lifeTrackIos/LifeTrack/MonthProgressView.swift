@@ -86,7 +86,9 @@ struct MonthProgressView: View {
             ZStack {
                 if today {
                     RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color(UIColor.systemGreen), lineWidth: 2)
+                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                         .modifier(PulseModifier())
                 } else {
                     RoundedRectangle(cornerRadius: 10)
@@ -97,7 +99,7 @@ struct MonthProgressView: View {
                     .font(.system(size: 12, weight: today ? .bold : .medium))
                     .foregroundColor(
                         today
-                            ? Color(UIColor.systemGreen)
+                            ? (isDone ? .white : Color(UIColor.systemOrange))
                             : (isDone ? .white : Color(UIColor.systemGray3))
                     )
             }

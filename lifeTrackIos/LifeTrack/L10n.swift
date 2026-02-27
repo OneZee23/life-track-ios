@@ -1,35 +1,36 @@
 import Foundation
 
 enum L10n {
-    static let isRu: Bool = {
+    // Mutable flag — updated by AppStore when language changes
+    static var isRu: Bool = {
         Locale.current.language.languageCode?.identifier == "ru"
     }()
 
     // MARK: - Tabs
 
-    static let tabCheckIn  = isRu ? "Чек-ин"   : "Check-in"
-    static let tabProgress = isRu ? "Прогресс"  : "Progress"
-    static let tabHabits   = isRu ? "Привычки"  : "Habits"
+    static var tabCheckIn:  String { isRu ? "Чек-ин"   : "Check-in" }
+    static var tabProgress: String { isRu ? "Прогресс"  : "Progress" }
+    static var tabHabits:   String { isRu ? "Привычки"  : "Habits" }
 
     // MARK: - Check-in
 
-    static let checkIn          = isRu ? "Чек-ин"              : "Check-in"
-    static let yesterdayPrefix  = isRu ? "Вчера"               : "Yesterday"
+    static var checkIn:         String { isRu ? "Чек-ин"  : "Check-in" }
+    static var yesterdayPrefix: String { isRu ? "Вчера"   : "Yesterday" }
 
     // MARK: - Habits
 
-    static let habits    = isRu ? "Привычки"           : "Habits"
-    static let done      = isRu ? "Готово"              : "Done"
-    static let edit      = isRu ? "Изменить"            : "Edit"
-    static let addHabit  = isRu ? "Добавить привычку"   : "Add habit"
-    static let maxHabits = isRu ? "Максимум 10 привычек" : "Maximum 10 habits"
-    static let newHabit  = isRu ? "Новая привычка"      : "New habit"
-    static let editHabit = isRu ? "Редактировать"       : "Edit habit"
-    static let name      = isRu ? "Название"            : "Name"
-    static let cancel    = isRu ? "Отмена"              : "Cancel"
-    static let add       = isRu ? "Добавить"            : "Add"
-    static let save      = isRu ? "Сохранить"           : "Save"
-    static let delete    = isRu ? "Удалить"             : "Delete"
+    static var habits:    String { isRu ? "Привычки"           : "Habits" }
+    static var done:      String { isRu ? "Готово"              : "Done" }
+    static var edit:      String { isRu ? "Изменить"            : "Edit" }
+    static var addHabit:  String { isRu ? "Добавить привычку"   : "Add habit" }
+    static var maxHabits: String { isRu ? "Максимум 10 привычек" : "Maximum 10 habits" }
+    static var newHabit:  String { isRu ? "Новая привычка"      : "New habit" }
+    static var editHabit: String { isRu ? "Редактировать"       : "Edit habit" }
+    static var name:      String { isRu ? "Название"            : "Name" }
+    static var cancel:    String { isRu ? "Отмена"              : "Cancel" }
+    static var add:       String { isRu ? "Добавить"            : "Add" }
+    static var save:      String { isRu ? "Сохранить"           : "Save" }
+    static var delete:    String { isRu ? "Удалить"             : "Delete" }
 
     static func habitsCount(_ n: Int) -> String {
         isRu ? "\(n) из 10" : "\(n) of 10"
@@ -37,93 +38,126 @@ enum L10n {
 
     // MARK: - Settings
 
-    static let settings         = isRu ? "Настройки"    : "Settings"
-    static let darkTheme        = isRu ? "Тёмная тема"  : "Dark theme"
-    static let appearance       = isRu ? "Внешний вид"  : "Appearance"
-    static let aboutProject     = isRu ? "О проекте"    : "About"
-    static let feedback         = isRu ? "Обратная связь" : "Feedback"
-    static let writeAuthor      = isRu ? "Написать автору" : "Contact author"
-    static let bugsIdeas        = isRu ? "Баги, идеи, предложения" : "Bugs, ideas, suggestions"
-    static let links            = isRu ? "Ссылки"       : "Links"
-    static let telegramChannel  = isRu ? "Telegram-канал" : "Telegram channel"
-    static let telegramSubtitle = isRu ? "Разработка LifeTrack в реальном времени" : "LifeTrack development in real time"
-    static let youtubeSubtitle  = isRu ? "Канал автора"  : "Author's channel"
-    static let version          = isRu ? "Версия"       : "Version"
+    static var settings:         String { isRu ? "Настройки"    : "Settings" }
+    static var appearance:       String { isRu ? "Внешний вид"  : "Appearance" }
+    static var themeAuto:        String { isRu ? "Системная"    : "System" }
+    static var themeLight:       String { isRu ? "Светлая"      : "Light" }
+    static var themeDark:        String { isRu ? "Тёмная"       : "Dark" }
+    static var language:         String { isRu ? "Язык"         : "Language" }
+    static var languageAuto:     String { isRu ? "Системный"    : "System" }
+    static var aboutProject:     String { isRu ? "О проекте"    : "About" }
+    static var feedback:         String { isRu ? "Обратная связь" : "Feedback" }
+    static var writeAuthor:      String { isRu ? "Написать автору" : "Contact author" }
+    static var bugsIdeas:        String { isRu ? "Баги, идеи, предложения" : "Bugs, ideas, suggestions" }
+    static var links:            String { isRu ? "Ссылки"       : "Links" }
+    static var telegramChannel:  String { isRu ? "Telegram-канал" : "Telegram channel" }
+    static var telegramSubtitle: String { isRu ? "Разработка LifeTrack в реальном времени" : "LifeTrack development in real time" }
+    static var youtubeSubtitle:  String { isRu ? "Канал автора"  : "Author's channel" }
+    static var version:          String { isRu ? "Версия"       : "Version" }
 
-    static let aboutDescription = isRu
-        ? "LifeTrack — минималистичный трекер привычек. Отмечай вчерашний день за 5 секунд, смотри прогресс на тепловой карте. Без оценок, без стресса — просто делал или не делал."
-        : "LifeTrack is a minimalist habit tracker. Log yesterday in 5 seconds, see your progress on a heat map. No ratings, no stress — just did or didn't."
+    static var aboutDescription: String {
+        isRu
+        ? "LifeTrack — минималистичный трекер привычек. Отмечай свой день за 5 секунд, смотри прогресс на тепловой карте. Без оценок, без стресса — просто делал или не делал."
+        : "LifeTrack is a minimalist habit tracker. Log your day in 5 seconds, see your progress on a heat map. No ratings, no stress — just did or didn't."
+    }
 
-    static let aboutMVP = isRu
+    static var aboutMVP: String {
+        isRu
         ? "Это MVP — приложение создаётся открыто, вместе с сообществом. Весь процесс в Telegram-канале."
         : "This is an MVP — the app is being built openly, with the community. Follow the process on Telegram."
+    }
 
-    static let aboutAuthor = isRu
+    static var aboutAuthor: String {
+        isRu
         ? "Автор — OneZee, инди-разработчик."
         : "Made by OneZee, indie developer."
+    }
 
-    static let footerMVP = isRu
+    static var footerMVP: String {
+        isRu
         ? "LifeTrack Native MVP — сделано с душой ♥"
         : "LifeTrack Native MVP — made with love ♥"
+    }
 
     // MARK: - Progress
 
-    static let progress = isRu ? "Прогресс" : "Progress"
-    static let month    = isRu ? "Месяц"    : "Month"
-    static let year     = isRu ? "Год"      : "Year"
-    static let week     = isRu ? "Неделя"   : "Week"
-    static let all      = isRu ? "Все"      : "All"
+    static var progress: String { isRu ? "Прогресс" : "Progress" }
+    static var month:    String { isRu ? "Месяц"    : "Month" }
+    static var year:     String { isRu ? "Год"      : "Year" }
+    static var week:     String { isRu ? "Неделя"   : "Week" }
+    static var all:      String { isRu ? "Все"      : "All" }
 
     // MARK: - Day progress
 
-    static let awaitingCheckIn = isRu ? "Ожидает чек-ина"  : "Awaiting check-in"
-    static let allDone         = isRu ? "Все выполнено!"    : "All done!"
-    static let partial         = isRu ? "Частично"          : "Partial"
-    static let notDone         = isRu ? "Не выполнено"      : "Not done"
+    static var awaitingCheckIn: String { isRu ? "Ожидает чек-ина"  : "Awaiting check-in" }
+    static var allDone:         String { isRu ? "Все выполнено!"    : "All done!" }
+    static var partial:         String { isRu ? "Частично"          : "Partial" }
+    static var notDone:         String { isRu ? "Не выполнено"      : "Not done" }
 
     // MARK: - Month progress
 
-    static let bestStreak    = isRu ? "Лучшая серия"  : "Best streak"
-    static let currentStreak = isRu ? "Текущая серия"  : "Current streak"
+    static var bestStreak:    String { isRu ? "Лучшая серия"  : "Best streak" }
+    static var currentStreak: String { isRu ? "Текущая серия"  : "Current streak" }
 
     // MARK: - Week progress
 
-    static let weekTotal = isRu ? "Итог недели" : "Week total"
+    static var weekTotal: String { isRu ? "Итог недели" : "Week total" }
 
     // MARK: - Year progress
 
-    static let completed = isRu ? "Выполнено" : "Completed"
-    static let tracked   = isRu ? "Затрекано" : "Tracked"
-    static let missed    = isRu ? "Пропуск"   : "Missed"
-    static let today     = isRu ? "Сегодня"   : "Today"
+    static var completed: String { isRu ? "Выполнено" : "Completed" }
+    static var tracked:   String { isRu ? "Затрекано" : "Tracked" }
+    static var missed:    String { isRu ? "Пропуск"   : "Missed" }
+    static var today:     String { isRu ? "Сегодня"   : "Today" }
+
+    // MARK: - Celebration
+
+    static var inARow: String { isRu ? "подряд!" : "streak!" }
+
+    static func randomCongrats() -> String {
+        let options: [String] = isRu
+            ? ["🎉 Все выполнено!", "💪 Отличная работа!", "⭐ Так держать!", "🏆 Молодец!", "✨ День закрыт!"]
+            : ["🎉 All done!", "💪 Great work!", "⭐ Keep it up!", "🏆 Well done!", "✨ Day complete!"]
+        return options.randomElement()!
+    }
 
     // MARK: - Date arrays
 
-    static let monthsFull: [String] = isRu
+    static var monthsFull: [String] {
+        isRu
         ? ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
         : ["January", "February", "March", "April", "May", "June",
            "July", "August", "September", "October", "November", "December"]
+    }
 
-    static let monthsShort: [String] = isRu
+    static var monthsShort: [String] {
+        isRu
         ? ["Янв", "Фев", "Мар", "Апр", "Май", "Июн",
            "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"]
         : ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    }
 
-    static let monthsGenitive: [String] = isRu
+    static var monthsGenitive: [String] {
+        isRu
         ? ["января", "февраля", "марта", "апреля", "мая", "июня",
            "июля", "августа", "сентября", "октября", "ноября", "декабря"]
         : ["January", "February", "March", "April", "May", "June",
            "July", "August", "September", "October", "November", "December"]
+    }
 
-    static let weekdaysFull: [String] = isRu
+    static var weekdaysFull: [String] {
+        isRu
         ? ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
         : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    }
 
-    static let weekdaysShort: [String] = isRu
+    static var weekdaysShort: [String] {
+        isRu
         ? ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
         : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    }
 
     // MARK: - Pluralization
 
@@ -144,11 +178,7 @@ enum L10n {
     static func dateLabel(for date: Date) -> String {
         let day = Calendar.current.component(.day, from: date)
         let monthIdx = Calendar.current.component(.month, from: date) - 1
-        if isRu {
-            return "\(day) \(monthsGenitive[monthIdx])"
-        } else {
-            return "\(monthsGenitive[monthIdx]) \(day)"
-        }
+        return "\(day) \(monthsShort[monthIdx])"
     }
 
     static func dayDateLabel(date: Date) -> String {
@@ -164,9 +194,11 @@ enum L10n {
 
     // MARK: - Default habits
 
-    static let defaultHabits: [(String, String)] = isRu
+    static var defaultHabits: [(String, String)] {
+        isRu
         ? [("🛌", "Сон"), ("🚴", "Активность"), ("🥗", "Питание"),
            ("🧠", "Ментальное"), ("💻", "Проекты")]
         : [("🛌", "Sleep"), ("🚴", "Activity"), ("🥗", "Nutrition"),
            ("🧠", "Mental"), ("💻", "Projects")]
+    }
 }

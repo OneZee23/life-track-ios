@@ -84,16 +84,24 @@ struct WeekProgressView: View {
                     VStack(spacing: 4) {
                         Text(L10n.weekdaysShort[i])
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(today ? Color(UIColor.systemGreen) : .secondary)
+                            .foregroundColor(today ? Color(UIColor.systemOrange) : .secondary)
 
                         ZStack {
-                            if today {
+                            if today && isDone {
                                 Circle()
-                                    .strokeBorder(Color(UIColor.systemGreen), lineWidth: 2)
+                                    .fill(Color(UIColor.systemGreen).opacity(0.15))
+                                Circle()
+                                    .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(Color(UIColor.systemGreen))
+                            } else if today {
+                                Circle()
+                                    .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                                     .modifier(PulseModifier())
                                 Text("\(Calendar.current.component(.day, from: day))")
                                     .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(Color(UIColor.systemGreen))
+                                    .foregroundColor(Color(UIColor.systemOrange))
                             } else if isDone {
                                 Circle()
                                     .fill(Color(UIColor.systemGreen).opacity(0.15))
@@ -118,7 +126,7 @@ struct WeekProgressView: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
                                     .strokeBorder(
-                                        today ? Color(UIColor.systemGreen) : Color.clear,
+                                        today ? Color(UIColor.systemOrange) : Color.clear,
                                         lineWidth: 2
                                     )
                             )
@@ -174,16 +182,13 @@ struct WeekProgressView: View {
                 ForEach(Array(dayValues.enumerated()), id: \.offset) { i, val in
                     let today = isToday(days[i])
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(
-                            today ? Color.clear
-                            : (val == true ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                        )
+                        .fill(val == true ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
                         .frame(height: 6)
                         .overlay(
                             Group {
                                 if today {
                                     RoundedRectangle(cornerRadius: 3)
-                                        .strokeBorder(Color(UIColor.systemGreen), lineWidth: 1.5)
+                                        .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
                                 }
                             }
                         )
@@ -201,14 +206,14 @@ struct WeekProgressView: View {
 
     var weekTotal: some View {
         let doneDays = days.filter { day in
-            if isFuture(day) || isToday(day) { return false }
+            if isFuture(day) && !isToday(day) { return false }
             let ds = formatDate(day)
             if let s = store.dayStatus(date: ds, habitId: filterHabitId) {
                 return s != .none
             }
             return false
         }.count
-        let totalDays = days.filter { !isFuture($0) && !isToday($0) }.count
+        let totalDays = days.filter { !isFuture($0) || isToday($0) }.count
 
         return HStack {
             Text(L10n.weekTotal)

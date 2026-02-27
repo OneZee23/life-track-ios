@@ -31,10 +31,10 @@ struct DayProgressView: View {
                 Text(verbatim: L10n.dayDateLabel(date: date))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                if today {
+                if today && doneCount < visibleHabits.count {
                     Text(L10n.awaitingCheckIn)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Color(UIColor.systemGreen))
+                        .foregroundColor(Color(UIColor.systemOrange))
                         .padding(.top, 2)
                 }
             }
@@ -58,39 +58,31 @@ struct DayProgressView: View {
             ZStack {
                 Circle()
                     .fill(
-                        today
-                            ? Color(UIColor.systemGray5)
-                            : (doneCount == visibleHabits.count && !visibleHabits.isEmpty
-                               ? Color(UIColor.systemGreen).opacity(0.15)
-                               : Color(UIColor.systemGray5))
+                        doneCount == visibleHabits.count && !visibleHabits.isEmpty
+                            ? Color(UIColor.systemGreen).opacity(0.15)
+                            : Color(UIColor.systemGray5)
                     )
                     .frame(width: 72, height: 72)
                     .overlay(
                         Group {
                             if today {
                                 Circle()
-                                    .strokeBorder(Color(UIColor.systemGreen), lineWidth: 2)
+                                    .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                                     .modifier(PulseModifier())
                             }
                         }
                     )
 
-                if today {
-                    Text("?")
-                        .font(.system(size: 28))
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("\(doneCount)/\(visibleHabits.count)")
-                        .font(.system(size: 20, weight: .black, design: .rounded))
-                        .foregroundColor(
-                            doneCount == visibleHabits.count && !visibleHabits.isEmpty
-                                ? Color(UIColor.systemGreen)
-                                : .secondary
-                        )
-                }
+                Text("\(doneCount)/\(visibleHabits.count)")
+                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .foregroundColor(
+                        doneCount == visibleHabits.count && !visibleHabits.isEmpty
+                            ? Color(UIColor.systemGreen)
+                            : .secondary
+                    )
             }
 
-            if !today && !visibleHabits.isEmpty {
+            if !visibleHabits.isEmpty {
                 Text(doneCount == visibleHabits.count ? L10n.allDone : doneCount > 0 ? L10n.partial : L10n.notDone)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(
@@ -105,8 +97,8 @@ struct DayProgressView: View {
     // MARK: - Habit row
 
     func habitRow(habit: Habit) -> some View {
-        let done = !today && store.checkinValue(habitId: habit.id, date: dateStr) == 1
-        let hasData = !today && store.checkins[dateStr]?[habit.id] != nil
+        let done = store.checkinValue(habitId: habit.id, date: dateStr) == 1
+        let hasData = store.checkins[dateStr]?[habit.id] != nil
 
         return HStack(spacing: 12) {
             ZStack {

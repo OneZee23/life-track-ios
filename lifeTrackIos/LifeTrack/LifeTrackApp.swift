@@ -8,7 +8,7 @@ struct LifeTrackApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
-                .preferredColorScheme(store.isDark ? .dark : .light)
+                .preferredColorScheme(store.preferredColorScheme)
         }
     }
 }
