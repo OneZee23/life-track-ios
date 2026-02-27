@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.1.0 | **Started:** Feb 2026
+**Status:** v0.2.0 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---
@@ -12,7 +12,7 @@
 
 Every habit tracker asks too much. Sliders, ratings, timers, notes. LifeTrack asks one thing: **did you do it?** Tap = done. Don't tap = skip. Five habits, five taps, done. See your GitHub-style heatmap grow green.
 
-No sign-up. No cloud. No notifications. No stress. No thinking.
+No sign-up. No cloud. No stress. No thinking. Russian & English.
 
 ---
 
@@ -37,6 +37,8 @@ First post: [Day 0/30 in Telegram channel](https://t.me/onezee_co)
 ```
 Morning routine:
 
+  🌙 Yesterday, 26 Feb  |  ☀️ Today, 27 Feb
+
   🛌 Сон          [ — ] → tap → [ ✓ ]
   🚴 Активность   [ — ] → tap → [ ✓ ]
   🥗 Питание      [ — ]
@@ -45,9 +47,7 @@ Morning routine:
 
   ████████████░░░░ 4/5
 
-  [ Готово ✓ ]
-
-Total time: 5 seconds.
+Total time: 5 seconds. No "Done" button — saves instantly.
 ```
 
 Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses until you check in.
@@ -57,11 +57,11 @@ Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses 
 ## Features
 
 ### Check-in Screen
-- Tap card to toggle: gray (skip) → green (done)
+- Tap card to toggle: gray (skip) → green (done) — saves instantly
 - Spring scale animation + haptic feedback
 - Progress bar: X/N filled
-- "Готово" → summary screen
-- Check-in available for yesterday (if missed)
+- Day switcher: Yesterday / Today with sliding pill selector
+- 100% completion → celebration overlay with confetti, haptic, and streak count
 
 ### Progress Screen (Drill-down)
 - **Year:** 12 month cards with heatmaps (green/gray)
@@ -81,10 +81,12 @@ Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses 
 - Default: Sleep, Activity, Nutrition, Mental, Projects
 
 ### Settings
-- Dark/light theme toggle
+- Theme: Auto (system) / Light / Dark with animated day/night scene
+- Language: System / Russian / English — switches instantly
 - About section with project info
 - Feedback link (@onezee123 on Telegram)
 - Social links (Telegram channel, YouTube)
+- Auto version display from bundle
 
 ---
 
@@ -114,10 +116,12 @@ life-track-ios/
 │   │   ├── ContentView.swift           # TabView (3 tabs)
 │   │   ├── Models.swift                # Habit, DayStatus
 │   │   ├── AppStore.swift              # ObservableObject, UserDefaults persistence
-│   │   ├── DateUtils.swift             # Date helpers, Russian locale
+│   │   ├── DateUtils.swift             # Date helpers
+│   │   ├── L10n.swift                  # Localization (ru/en, runtime switching)
 │   │   │
-│   │   ├── CheckInView.swift           # Daily check-in screen
+│   │   ├── CheckInView.swift           # Daily check-in (today/yesterday)
 │   │   ├── HabitToggleCard.swift       # Tap card with spring animation
+│   │   ├── ConfettiView.swift          # Celebration confetti overlay
 │   │   │
 │   │   ├── ProgressRootView.swift      # Progress container + navigation + filters
 │   │   ├── YearProgressView.swift      # Year view (12 mini heatmaps)
@@ -126,7 +130,7 @@ life-track-ios/
 │   │   ├── DayProgressView.swift       # Day detailed view
 │   │   │
 │   │   ├── HabitsView.swift            # Habit CRUD + drag & drop reorder
-│   │   └── SettingsView.swift          # Settings (theme, about, links)
+│   │   └── SettingsView.swift          # Settings (theme, language, about)
 │   └── LifeTrack.xcodeproj
 ├── mvp/                                # Prototypes and docs (JSX, PRD, tech spec)
 ├── Makefile                            # Build & submit scripts
@@ -206,21 +210,33 @@ APP_STORE_ISSUER_ID=<your-issuer-id>
 - [x] Settings with about section
 - [x] Xcode archive + App Store submission scripts
 
-### v0.2.0 (planned)
+### v0.2.0 (done)
 
-- [ ] Push notifications (daily reminder)
-- [ ] Onboarding (2-3 screens)
+- [x] Instant check-in — tap saves immediately, no "Done" button
+- [x] Yesterday / Today day switcher with sliding pill selector
+- [x] English localization + runtime language switching (System / Russian / English)
+- [x] Auto theme (System / Light / Dark) — follows iOS system theme
+- [x] 100% celebration overlay with confetti, haptic, and streak count
+- [x] Dark app icon for iOS 18+
+- [x] Auto version display from bundle in Settings
+- [x] Progress views show today's real check-in status
+
+### v0.3.0 (planned)
+
+- [ ] Push notifications (daily reminder at user-chosen time)
+- [ ] Onboarding (2-3 screens with app preview)
 - [ ] iOS widget (today's streak)
 - [ ] Export data (CSV/JSON)
-- [ ] Streak celebration screen
-- [ ] English localization
+- [ ] Detailed check-in (optional numeric, text, rating per habit)
 
-### v0.3.0 (ideas)
+### v0.4.0 (ideas)
 
 - [ ] Online sync (server + local offline data merge)
 - [ ] Apple Watch companion
 - [ ] Advanced mode (0-5 scale for power users)
 - [ ] Sharing streak cards (Instagram stories)
+- [ ] Habit frequency settings (weekdays, N times/week)
+- [ ] Achievements & badges (7/21/66 day streaks)
 
 ---
 
