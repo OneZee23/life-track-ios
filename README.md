@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.2.0 | **Started:** Feb 2026
+**Status:** v0.2.1 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---
@@ -64,14 +64,14 @@ Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses 
 - 100% completion → celebration overlay with confetti, haptic, and streak count
 
 ### Progress Screen (Drill-down)
-- **Year:** 12 month cards with heatmaps (green/gray)
-- **Month:** Calendar grid, current & best streaks
+- **Year:** GitHub-style heatmap with 5-level color gradient + summary cards (day counter, completed, perfect)
+- **Month:** Calendar grid with gradient colors, current & best streaks
 - **Week:** Per-habit bars, weekly summary
-- **Day:** Detailed view per habit
-- **Today:** Pulsing green border
-- Filter by individual habit (chips)
-- Deleted habits shown only where they have data
-- Drill-down navigation: Year → Month → Week → Day
+- **Day:** Detailed view per habit with left/right navigation arrows
+- **Year Analytics:** Completion rate, streaks, habit ranking, monthly breakdown
+- **Month Analytics:** Completion rate, streaks, habit ranking, weekly breakdown
+- **Today:** Pulsing orange border across all views
+- Drill-down navigation: Year → Month → Week → Day, Analytics → Month → Week → Day
 
 ### Habits Management
 - Add / edit / delete with confirmation dialog
@@ -123,11 +123,13 @@ life-track-ios/
 │   │   ├── HabitToggleCard.swift       # Tap card with spring animation
 │   │   ├── ConfettiView.swift          # Celebration confetti overlay
 │   │   │
-│   │   ├── ProgressRootView.swift      # Progress container + navigation + filters
-│   │   ├── YearProgressView.swift      # Year view (12 mini heatmaps)
+│   │   ├── ProgressRootView.swift      # Progress container + navigation
+│   │   ├── YearProgressView.swift      # Year heatmap + summary cards
 │   │   ├── MonthProgressView.swift     # Month calendar grid + streaks
 │   │   ├── WeekProgressView.swift      # Week per-habit breakdown
-│   │   ├── DayProgressView.swift       # Day detailed view
+│   │   ├── DayProgressView.swift       # Day detailed view + day navigation
+│   │   ├── YearAnalyticsView.swift     # Year analytics (rate, streaks, habits, months)
+│   │   ├── MonthAnalyticsView.swift    # Month analytics (rate, streaks, habits, weeks)
 │   │   │
 │   │   ├── HabitsView.swift            # Habit CRUD + drag & drop reorder
 │   │   └── SettingsView.swift          # Settings (theme, language, about)
@@ -220,6 +222,16 @@ APP_STORE_ISSUER_ID=<your-issuer-id>
 - [x] Dark app icon for iOS 18+
 - [x] Auto version display from bundle in Settings
 - [x] Progress views show today's real check-in status
+
+### v0.2.1 (done)
+
+- [x] GitHub-style heatmap with 5-level color gradient
+- [x] Year analytics — completion rate, streaks, habit ranking, monthly breakdown
+- [x] Month analytics — completion rate, streaks, habit ranking, weekly breakdown
+- [x] Day navigation arrows (left/right)
+- [x] Adaptive first summary card (day counter / missed days / total days)
+- [x] Haptic feedback on all progress interactions
+- [x] Completion rate counts per habit check-in, not per day
 
 ### v0.3.0 (planned)
 

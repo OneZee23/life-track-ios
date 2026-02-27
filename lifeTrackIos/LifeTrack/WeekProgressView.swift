@@ -4,7 +4,6 @@ struct WeekProgressView: View {
     @EnvironmentObject var store: AppStore
 
     let weekStartDate: Date
-    let filterHabitId: String?
     let onWeekChange: (Date) -> Void
     let onDayTap: (Date) -> Void
 
@@ -72,15 +71,16 @@ struct WeekProgressView: View {
             ForEach(Array(days.enumerated()), id: \.offset) { i, day in
                 let today = isToday(day)
                 let ds = formatDate(day)
-                let isDone: Bool = {
-                    guard !isFuture(day) || today else { return false }
-                    if let s = store.dayStatus(date: ds, habitId: filterHabitId) {
-                        return s != .none
-                    }
-                    return false
+                let status: DayStatus = {
+                    guard !isFuture(day) || today else { return .none }
+                    return store.dayStatus(date: ds) ?? .none
                 }()
+                let isDone = status != .none
 
-                Button { onDayTap(day) } label: {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onDayTap(day)
+                } label: {
                     VStack(spacing: 4) {
                         Text(L10n.weekdaysShort[i])
                             .font(.system(size: 10, weight: .semibold))
@@ -89,7 +89,7 @@ struct WeekProgressView: View {
                         ZStack {
                             if today && isDone {
                                 Circle()
-                                    .fill(Color(UIColor.systemGreen).opacity(0.15))
+                                    .fill(status.color.opacity(0.3))
                                 Circle()
                                     .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                                 Image(systemName: "checkmark")
@@ -104,7 +104,7 @@ struct WeekProgressView: View {
                                     .foregroundColor(Color(UIColor.systemOrange))
                             } else if isDone {
                                 Circle()
-                                    .fill(Color(UIColor.systemGreen).opacity(0.15))
+                                    .fill(status.color.opacity(0.3))
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(Color(UIColor.systemGreen))
@@ -140,9 +140,7 @@ struct WeekProgressView: View {
     // MARK: - Habit bars
 
     var habitBars: some View {
-        let visibleHabits = filterHabitId != nil
-            ? store.activeHabits.filter { $0.id == filterHabitId }
-            : store.activeHabits
+        let visibleHabits = store.activeHabits
 
         return VStack(spacing: 8) {
             ForEach(visibleHabits) { habit in
@@ -208,7 +206,7 @@ struct WeekProgressView: View {
         let doneDays = days.filter { day in
             if isFuture(day) && !isToday(day) { return false }
             let ds = formatDate(day)
-            if let s = store.dayStatus(date: ds, habitId: filterHabitId) {
+            if let s = store.dayStatus(date: ds) {
                 return s != .none
             }
             return false
@@ -239,7 +237,10 @@ struct WeekProgressView: View {
     }
 
     func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(UIColor.systemGray5))

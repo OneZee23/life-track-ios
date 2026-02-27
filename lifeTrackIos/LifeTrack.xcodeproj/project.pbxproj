@@ -24,6 +24,8 @@
 		AA00000000000000000000BF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000AF /* Assets.xcassets */; };
 		AA00000000000000000000D2 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D1 /* ConfettiView.swift */; };
 		AA00000000000000000000D4 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D3 /* L10n.swift */; };
+		AA00000000000000000000D6 /* YearAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D5 /* YearAnalyticsView.swift */; };
+		AA00000000000000000000D8 /* MonthAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D7 /* MonthAnalyticsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +48,8 @@
 		AA00000000000000000000C1 /* LifeTrack.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LifeTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA00000000000000000000D1 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000D3 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		AA00000000000000000000D5 /* YearAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearAnalyticsView.swift; sourceTree = "<group>"; };
+		AA00000000000000000000D7 /* MonthAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthAnalyticsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +98,8 @@
 				AA00000000000000000000AE /* SettingsView.swift */,
 				AA00000000000000000000D1 /* ConfettiView.swift */,
 				AA00000000000000000000D3 /* L10n.swift */,
+				AA00000000000000000000D5 /* YearAnalyticsView.swift */,
+				AA00000000000000000000D7 /* MonthAnalyticsView.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -193,6 +199,8 @@
 				AA00000000000000000000BE /* SettingsView.swift in Sources */,
 				AA00000000000000000000D2 /* ConfettiView.swift in Sources */,
 				AA00000000000000000000D4 /* L10n.swift in Sources */,
+				AA00000000000000000000D6 /* YearAnalyticsView.swift in Sources */,
+				AA00000000000000000000D8 /* MonthAnalyticsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,7 +329,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -333,7 +341,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -348,7 +356,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -360,7 +368,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

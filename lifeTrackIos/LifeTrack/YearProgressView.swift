@@ -4,67 +4,202 @@ struct YearProgressView: View {
     @EnvironmentObject var store: AppStore
 
     let year: Int
-    let filterHabitId: String?
     let onYearChange: (Int) -> Void
-    let onMonthTap: (Int) -> Void
+    let onDayTap: (Date) -> Void
+    let onAnalyticsTap: () -> Void
+
+    private let cellSize: CGFloat = 14
+    private let cellSpacing: CGFloat = 3
+    private let dayLabelWidth: CGFloat = 26
 
     private var now: Date { Date() }
     private var currentYear: Int { Calendar.current.component(.year, from: now) }
-    private var currentMonth: Int { Calendar.current.component(.month, from: now) - 1 }
 
     var body: some View {
         VStack(spacing: 12) {
-            // Nav header
-            HStack {
-                navArrow(left: true) { onYearChange(year - 1) }
-                Spacer()
-                Text(verbatim: String(year))
-                    .font(.system(size: 17, weight: .bold))
-                Spacer()
-                navArrow(left: false) { onYearChange(year + 1) }
-            }
-            .padding(.bottom, 2)
-
-            // Year summary
+            navHeader
             yearSummary
-
-            // Month cards
-            ForEach(0..<12, id: \.self) { month in
-                monthCard(month: month)
-            }
-
-            // Legend
-            legend
+            heatmapCard
+            githubLegend
+            analyticsButton
         }
+    }
+
+    // MARK: - Nav header
+
+    var navHeader: some View {
+        HStack {
+            navArrow(left: true) { onYearChange(year - 1) }
+            Spacer()
+            Text(verbatim: String(year))
+                .font(.system(size: 17, weight: .bold))
+            Spacer()
+            navArrow(left: false) { onYearChange(year + 1) }
+        }
+        .padding(.bottom, 2)
     }
 
     // MARK: - Summary cards
 
     var yearSummary: some View {
-        let (doneDays, trackedDays) = computeYearTotals()
+        let totalDaysInYear = isLeapYear(year) ? 366 : 365
+
         return HStack(spacing: 8) {
-            summaryCard(label: L10n.completed, value: doneDays, color: Color(UIColor.systemGreen))
-            summaryCard(label: L10n.tracked, value: trackedDays, color: .primary)
+            if year == currentYear {
+                let dayOfYear = currentDayOfYear()
+                firstCard(
+                    label: L10n.dayOfYear,
+                    valueText: "\(dayOfYear)",
+                    suffix: "/\(totalDaysInYear)",
+                    hint: L10n.hintDayOfYear,
+                    color: .primary
+                )
+            } else if year < currentYear {
+                let (_, _, tracked) = computeYearTotals()
+                let missed = totalDaysInYear - tracked
+                firstCard(
+                    label: L10n.missed,
+                    valueText: "\(missed)",
+                    suffix: nil,
+                    hint: L10n.hintMissedDays,
+                    color: Color(UIColor.systemRed)
+                )
+            } else {
+                firstCard(
+                    label: L10n.totalDays,
+                    valueText: "\(totalDaysInYear)",
+                    suffix: nil,
+                    hint: L10n.hintTotalDays,
+                    color: .primary
+                )
+            }
+
+            let (doneDays, perfectDays, _) = computeYearTotals()
+            summaryCard(label: L10n.completed, hint: L10n.hintCompleted, value: doneDays, color: Color(UIColor.systemGreen))
+            summaryCard(label: L10n.perfect, hint: L10n.hintPerfect, value: perfectDays, color: Color(UIColor.systemGreen))
         }
     }
 
-    func summaryCard(label: String, value: Int, color: Color) -> some View {
+    func firstCard(label: String, valueText: String, suffix: String?, hint: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
-            HStack(alignment: .bottom, spacing: 4) {
-                Text("\(value)")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
+                .lineLimit(1)
+            if let suffix = suffix {
+                HStack(alignment: .bottom, spacing: 1) {
+                    Text(valueText)
+                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .foregroundColor(color)
+                    Text(suffix)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .padding(.bottom, 2)
+                }
+            } else {
+                Text(valueText)
+                    .font(.system(size: 20, weight: .black, design: .rounded))
                     .foregroundColor(color)
-                Text(L10n.pluralDays(value))
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 3)
             }
+            Text(hint)
+                .font(.system(size: 9))
+                .foregroundColor(Color(UIColor.systemGray3))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
+    }
+
+    func summaryCard(label: String, hint: String, value: Int, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+                .lineLimit(1)
+            Text("\(value)")
+                .font(.system(size: 20, weight: .black, design: .rounded))
+                .foregroundColor(color)
+            Text(hint)
+                .font(.system(size: 9))
+                .foregroundColor(Color(UIColor.systemGray3))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
+    }
+
+    // MARK: - GitHub-style heatmap
+
+    var heatmapCard: some View {
+        let grid = buildYearGrid()
+
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
+                // Fixed day labels column
+                VStack(spacing: 0) {
+                    // Spacer for month label row
+                    Color.clear.frame(width: dayLabelWidth, height: 16)
+
+                    ForEach(0..<7, id: \.self) { row in
+                        if row == 0 || row == 2 || row == 4 {
+                            Text(L10n.weekdaysShort[row])
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .frame(width: dayLabelWidth, height: cellSize, alignment: .trailing)
+                                .padding(.trailing, 4)
+                                .padding(.bottom, row < 6 ? cellSpacing : 0)
+                        } else {
+                            Color.clear
+                                .frame(width: dayLabelWidth, height: cellSize)
+                                .padding(.bottom, row < 6 ? cellSpacing : 0)
+                        }
+                    }
+                }
+
+                // Scrollable area: month labels + grid
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            // Month labels
+                            monthLabelsRow(grid: grid)
+
+                            // Grid columns
+                            HStack(spacing: cellSpacing) {
+                                ForEach(0..<grid.columns.count, id: \.self) { col in
+                                    VStack(spacing: cellSpacing) {
+                                        ForEach(0..<7, id: \.self) { row in
+                                            cellView(cell: grid.columns[col][row])
+                                        }
+                                    }
+                                    .id(col)
+                                }
+                            }
+                            .padding(.trailing, 4)
+                        }
+                    }
+                    .onAppear {
+                        let targetCol = currentWeekColumn(grid: grid)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.none) {
+                                proxy.scrollTo(targetCol, anchor: .trailing)
+                            }
+                        }
+                    }
+                }
+            }
+        }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 14)
@@ -72,117 +207,90 @@ struct YearProgressView: View {
         )
     }
 
-    // MARK: - Month card
+    // MARK: - Month labels
 
-    func monthCard(month: Int) -> some View {
-        let isCurrentMonth = year == currentYear && month == currentMonth
-        let isPast = year < currentYear || (year == currentYear && month <= currentMonth)
-        let (cells, doneDays, trackedDays) = computeMonthData(month: month)
-        let pct = trackedDays > 0 ? Int(Double(doneDays) / Double(trackedDays) * 100) : nil
+    func monthLabelsRow(grid: YearGrid) -> some View {
+        let step = cellSize + cellSpacing
 
-        return Button {
-            if isPast { onMonthTap(month) }
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    HStack(spacing: 8) {
-                        Text(L10n.monthsFull[month])
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(isCurrentMonth ? Color(UIColor.systemGreen) : .primary)
-                        if let pct = pct {
-                            pctBadge(pct: pct)
-                        }
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12))
+        return HStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                // Invisible spacer for full width
+                Color.clear
+                    .frame(
+                        width: CGFloat(grid.columns.count) * step - cellSpacing,
+                        height: 12
+                    )
+
+                ForEach(Array(grid.monthLabels.enumerated()), id: \.offset) { _, item in
+                    Text(item.label)
+                        .font(.system(size: 9, weight: .medium))
                         .foregroundColor(.secondary)
-                }
-
-                // Calendar grid
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 7),
-                    spacing: 3
-                ) {
-                    // Weekday headers
-                    ForEach(L10n.weekdaysShort, id: \.self) { wd in
-                        Text(wd)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                    }
-                    // Cells
-                    ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
-                        heatmapCell(cell: cell, compact: true)
-                    }
+                        .offset(x: CGFloat(item.column) * step)
                 }
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(
-                                isCurrentMonth ? Color(UIColor.systemGreen) : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
-            )
-            .opacity(isPast ? 1 : 0.4)
         }
-        .buttonStyle(SpringButtonStyle())
-        .disabled(!isPast)
+        .frame(height: 12)
     }
 
-    // MARK: - Heatmap cell
+    // MARK: - Cell view
 
     @ViewBuilder
-    func heatmapCell(cell: HeatmapCell?, compact: Bool) -> some View {
+    func cellView(cell: YearHeatmapCell?) -> some View {
         if let cell = cell {
+            let status = cell.status ?? .none
             let today = isToday(cell.date)
-            let isDone: Bool = {
-                if let s = cell.status { return s != .none }
-                return false
-            }()
-            let day = Calendar.current.component(.day, from: cell.date)
+            let isFutureDate = isFuture(cell.date) && !today
 
-            ZStack {
-                if today {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
-                        .modifier(PulseModifier())
-                } else {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onDayTap(cell.date)
+            } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(isFutureDate ? Color(UIColor.systemGray6) : status.color)
+                        .frame(width: cellSize, height: cellSize)
+
+                    if today {
+                        RoundedRectangle(cornerRadius: 3)
+                            .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
+                            .frame(width: cellSize, height: cellSize)
+                            .modifier(PulseModifier())
+                    }
                 }
-                Text("\(day)")
-                    .font(.system(size: 10, weight: today ? .bold : .medium))
-                    .foregroundColor(
-                        today
-                            ? (isDone ? .white : Color(UIColor.systemOrange))
-                            : (isDone ? .white : Color(UIColor.systemGray3))
-                    )
             }
-            .aspectRatio(1, contentMode: .fit)
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .disabled(isFutureDate)
         } else {
             Color.clear
-                .aspectRatio(1, contentMode: .fit)
+                .frame(width: cellSize, height: cellSize)
         }
     }
 
     // MARK: - Legend
 
-    var legend: some View {
-        HStack(spacing: 16) {
-            legendItem(color: Color(UIColor.systemGreen), label: L10n.completed)
-            legendItem(color: Color(UIColor.systemGray5), label: L10n.missed)
+    var githubLegend: some View {
+        HStack(spacing: 4) {
+            Text(L10n.less)
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            ForEach([DayStatus.none, .low, .medium, .high, .full], id: \.level) { status in
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(status.color)
+                    .frame(width: 10, height: 10)
+            }
+
+            Text(L10n.more)
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            Spacer()
+
             HStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 2)
                     .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
-                    .frame(width: 8, height: 8)
+                    .frame(width: 10, height: 10)
                 Text(L10n.today)
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
@@ -191,47 +299,37 @@ struct YearProgressView: View {
         .padding(.top, 4)
     }
 
-    func legendItem(color: Color, label: String) -> some View {
-        HStack(spacing: 4) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(color)
-                .frame(width: 8, height: 8)
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
+    // MARK: - Analytics button
+
+    var analyticsButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onAnalyticsTap()
+        } label: {
+            HStack {
+                Text(L10n.detailedAnalytics)
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(Color(UIColor.systemGreen))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(UIColor.systemGreen).opacity(0.1))
+            )
         }
     }
 
     // MARK: - Helpers
 
-    func cellBackground(status: DayStatus?) -> Color {
-        guard let status = status else {
-            return Color(UIColor.systemGray5)
-        }
-        switch status {
-        case .all:     return Color(UIColor.systemGreen)
-        case .partial: return Color(UIColor.systemGreen).opacity(0.45)
-        case .none:    return Color(UIColor.systemGray5)
-        }
-    }
-
-    func pctBadge(pct: Int) -> some View {
-        let color: Color = pct >= 70
-            ? Color(UIColor.systemGreen)
-            : pct >= 40 ? Color(UIColor.systemYellow) : Color(UIColor.systemGray3)
-        let bg: Color = pct >= 70
-            ? Color(UIColor.systemGreen).opacity(0.15)
-            : pct >= 40 ? Color(UIColor.systemYellow).opacity(0.15) : Color(UIColor.systemGray5)
-        return Text("\(pct)%")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(RoundedRectangle(cornerRadius: 6).fill(bg))
-    }
-
     func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(UIColor.systemGray5))
@@ -245,50 +343,119 @@ struct YearProgressView: View {
 
     // MARK: - Data
 
-    func computeYearTotals() -> (Int, Int) {
-        var done = 0, tracked = 0
+    func buildYearGrid() -> YearGrid {
+        let cal = Calendar.current
+
+        let jan1 = cal.date(from: DateComponents(year: year, month: 1, day: 1))!
+        let jan1Wd = weekdayIndex(jan1) // 0=Mon..6=Sun
+
+        // Start from Monday of the week containing Jan 1
+        let startDate = cal.date(byAdding: .day, value: -jan1Wd, to: jan1)!
+
+        let dec31 = cal.date(from: DateComponents(year: year, month: 12, day: 31))!
+        let dec31Wd = weekdayIndex(dec31)
+        // End on Sunday of the week containing Dec 31
+        let endDate = cal.date(byAdding: .day, value: 6 - dec31Wd, to: dec31)!
+
+        let totalDays = cal.dateComponents([.day], from: startDate, to: endDate).day! + 1
+        let totalColumns = totalDays / 7
+
+        var columns: [[YearHeatmapCell?]] = Array(
+            repeating: Array(repeating: nil, count: 7),
+            count: totalColumns
+        )
+
+        var monthLabels: [(label: String, column: Int)] = []
+        var currentMonth = -1
+        var lastLabelCol = -10
+
+        for dayOffset in 0..<totalDays {
+            let date = cal.date(byAdding: .day, value: dayOffset, to: startDate)!
+            let col = dayOffset / 7
+            let row = dayOffset % 7
+
+            let dateYear = cal.component(.year, from: date)
+            let month = cal.component(.month, from: date) - 1
+
+            // Month labels (only for dates in target year, skip if too close to previous)
+            if dateYear == year && month != currentMonth {
+                currentMonth = month
+                if col - lastLabelCol >= 4 {
+                    monthLabels.append((L10n.monthsShort[month], col))
+                    lastLabelCol = col
+                }
+            }
+
+            // Only populate cells for dates in the target year
+            guard dateYear == year else {
+                columns[col][row] = nil
+                continue
+            }
+
+            let ds = formatDate(date)
+            let today = isToday(date)
+            let status: DayStatus? = (isFuture(date) && !today) ? nil : store.dayStatus(date: ds)
+            columns[col][row] = YearHeatmapCell(date: date, status: status)
+        }
+
+        return YearGrid(columns: columns, monthLabels: monthLabels)
+    }
+
+    func computeYearTotals() -> (done: Int, perfect: Int, tracked: Int) {
+        var done = 0, perfect = 0, tracked = 0
         for month in 0..<12 {
             let days = daysInMonth(year: year, month: month)
             for day in 1...days {
                 guard let d = makeDate(year: year, month: month, day: day) else { continue }
-                if isFuture(d) { continue }
+                if isFuture(d) && !isToday(d) { continue }
                 let ds = formatDate(d)
-                if let s = store.dayStatus(date: ds, habitId: filterHabitId) {
+                if let s = store.dayStatus(date: ds) {
                     tracked += 1
                     if s != .none { done += 1 }
+                    if s == .full { perfect += 1 }
                 }
             }
         }
-        return (done, tracked)
+        return (done, perfect, tracked)
     }
 
-    func computeMonthData(month: Int) -> ([HeatmapCell?], Int, Int) {
-        let days = daysInMonth(year: year, month: month)
-        let firstDow = weekdayIndex(makeDate(year: year, month: month, day: 1)!)
-        var cells: [HeatmapCell?] = Array(repeating: nil, count: firstDow)
-        var done = 0, tracked = 0
-
-        for day in 1...days {
-            guard let d = makeDate(year: year, month: month, day: day) else { continue }
-            let ds = formatDate(d)
-            let status = isFuture(d) ? nil : store.dayStatus(date: ds, habitId: filterHabitId)
-            if let s = status {
-                tracked += 1
-                if s != .none { done += 1 }
-            }
-            cells.append(HeatmapCell(date: d, status: status))
+    func currentDayOfYear() -> Int {
+        let cal = Calendar.current
+        if year == currentYear {
+            return cal.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        } else if year < currentYear {
+            return isLeapYear(year) ? 366 : 365
         }
-        // pad to full weeks
-        while cells.count % 7 != 0 { cells.append(nil) }
-        return (cells, done, tracked)
+        return 1
+    }
+
+    func isLeapYear(_ y: Int) -> Bool {
+        (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+    }
+
+    func currentWeekColumn(grid: YearGrid) -> Int {
+        let cal = Calendar.current
+        let jan1 = cal.date(from: DateComponents(year: year, month: 1, day: 1))!
+        let jan1Wd = weekdayIndex(jan1)
+        let startDate = cal.date(byAdding: .day, value: -jan1Wd, to: jan1)!
+
+        let today = Date()
+        let daysSinceStart = cal.dateComponents([.day], from: startDate, to: today).day ?? 0
+        let col = daysSinceStart / 7
+        return min(max(col, 0), grid.columns.count - 1)
     }
 }
 
-// MARK: - HeatmapCell model
+// MARK: - Data models
 
-struct HeatmapCell {
+struct YearHeatmapCell {
     let date: Date
     let status: DayStatus?
+}
+
+struct YearGrid {
+    let columns: [[YearHeatmapCell?]]  // [weekColumn][dayRow]
+    let monthLabels: [(label: String, column: Int)]
 }
 
 // MARK: - Pulse animation modifier

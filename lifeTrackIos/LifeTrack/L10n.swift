@@ -106,9 +106,34 @@ enum L10n {
     // MARK: - Year progress
 
     static var completed: String { isRu ? "Выполнено" : "Completed" }
-    static var tracked:   String { isRu ? "Затрекано" : "Tracked" }
+    static var dayOfYear: String { isRu ? "День"      : "Day" }
+    static var perfect:   String { isRu ? "Идеальных" : "Perfect" }
     static var missed:    String { isRu ? "Пропуск"   : "Missed" }
     static var today:     String { isRu ? "Сегодня"   : "Today" }
+    static var less:      String { isRu ? "Меньше"    : "Less" }
+    static var more:      String { isRu ? "Больше"    : "More" }
+
+    static var hintDayOfYear:  String { isRu ? "Текущий день года"  : "Current day of year" }
+    static var hintMissedDays: String { isRu ? "Дни без чекина"    : "Days without check-in" }
+    static var hintTotalDays:  String { isRu ? "Всего дней в году" : "Total days in year" }
+    static var totalDays:      String { isRu ? "Всего"             : "Total" }
+    static var hintCompleted: String { isRu ? "Дни с выполнением"     : "Days with progress" }
+    static var hintPerfect:   String { isRu ? "Дни на 100%"           : "Days at 100%" }
+
+    // MARK: - Year analytics
+
+    static var detailedAnalytics: String { isRu ? "Подробная аналитика" : "Detailed analytics" }
+    static var completionRate:    String { isRu ? "Процент выполнения"  : "Completion rate" }
+    static var monthlyBreakdown:  String { isRu ? "По месяцам"          : "By month" }
+    static var weeklyBreakdown:   String { isRu ? "По неделям"          : "By week" }
+
+    static func daysOf(_ done: Int, _ total: Int) -> String {
+        isRu ? "\(done) из \(total) \(pluralDays(total))" : "\(done) of \(total) \(pluralDays(total))"
+    }
+
+    static func checkinsOf(_ done: Int, _ total: Int) -> String {
+        isRu ? "\(done) из \(total) отметок" : "\(done) of \(total) check-ins"
+    }
 
     // MARK: - Celebration
 

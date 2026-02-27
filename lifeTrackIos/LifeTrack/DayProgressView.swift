@@ -4,15 +4,13 @@ struct DayProgressView: View {
     @EnvironmentObject var store: AppStore
 
     let date: Date
-    let filterHabitId: String?
+    let onDayChange: (Date) -> Void
 
     private var dateStr: String { formatDate(date) }
     private var today: Bool { isToday(date) }
 
     private var visibleHabits: [Habit] {
-        filterHabitId != nil
-            ? store.activeHabits.filter { $0.id == filterHabitId }
-            : store.activeHabits
+        store.activeHabits
     }
 
     private var doneCount: Int {
@@ -21,13 +19,32 @@ struct DayProgressView: View {
         }.count
     }
 
+    private var isFutureNextDay: Bool {
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: date)!
+        return isFuture(tomorrow) && !isToday(tomorrow)
+    }
+
     var body: some View {
         VStack(spacing: 16) {
-            // Day header
+            // Day header with navigation
             VStack(spacing: 4) {
-                Text(L10n.weekdaysFull[weekdayIndex(date)])
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.primary)
+                HStack {
+                    navArrow(left: true) {
+                        let prev = Calendar.current.date(byAdding: .day, value: -1, to: date)!
+                        onDayChange(prev)
+                    }
+                    Spacer()
+                    Text(L10n.weekdaysFull[weekdayIndex(date)])
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    navArrow(left: false) {
+                        let next = Calendar.current.date(byAdding: .day, value: 1, to: date)!
+                        onDayChange(next)
+                    }
+                    .opacity(isFutureNextDay ? 0.3 : 1.0)
+                    .disabled(isFutureNextDay)
+                }
                 Text(verbatim: L10n.dayDateLabel(date: date))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -54,12 +71,23 @@ struct DayProgressView: View {
     // MARK: - Score circle
 
     var scoreCircle: some View {
-        VStack(spacing: 6) {
+        let total = visibleHabits.count
+        let status: DayStatus = {
+            guard total > 0 else { return .none }
+            if doneCount == 0 { return .none }
+            let pct = Double(doneCount) / Double(total) * 100.0
+            if pct <= 25 { return .low }
+            if pct <= 50 { return .medium }
+            if pct <= 75 { return .high }
+            return .full
+        }()
+
+        return VStack(spacing: 6) {
             ZStack {
                 Circle()
                     .fill(
-                        doneCount == visibleHabits.count && !visibleHabits.isEmpty
-                            ? Color(UIColor.systemGreen).opacity(0.15)
+                        status != .none
+                            ? status.color.opacity(0.25)
                             : Color(UIColor.systemGray5)
                     )
                     .frame(width: 72, height: 72)
@@ -73,23 +101,41 @@ struct DayProgressView: View {
                         }
                     )
 
-                Text("\(doneCount)/\(visibleHabits.count)")
+                Text("\(doneCount)/\(total)")
                     .font(.system(size: 20, weight: .black, design: .rounded))
                     .foregroundColor(
-                        doneCount == visibleHabits.count && !visibleHabits.isEmpty
+                        status != .none
                             ? Color(UIColor.systemGreen)
                             : .secondary
                     )
             }
 
-            if !visibleHabits.isEmpty {
-                Text(doneCount == visibleHabits.count ? L10n.allDone : doneCount > 0 ? L10n.partial : L10n.notDone)
+            if total > 0 {
+                Text(doneCount == total ? L10n.allDone : doneCount > 0 ? L10n.partial : L10n.notDone)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(
-                        doneCount == visibleHabits.count
+                        status != .none
                             ? Color(UIColor.systemGreen)
                             : .secondary
                     )
+            }
+        }
+    }
+
+    // MARK: - Nav arrow
+
+    func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(UIColor.systemGray5))
+                    .frame(width: 32, height: 32)
+                Image(systemName: left ? "chevron.left" : "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
             }
         }
     }

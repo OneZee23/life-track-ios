@@ -49,7 +49,7 @@ class AppStore: ObservableObject {
     func dayStatus(date: String, habitId: String? = nil) -> DayStatus? {
         if let hid = habitId {
             guard let v = checkins[date]?[hid] else { return nil }
-            return v == 1 ? DayStatus.all : DayStatus.none
+            return v == 1 ? DayStatus.full : DayStatus.none
         }
 
         guard let dayData = checkins[date], !dayData.isEmpty else { return nil }
@@ -59,9 +59,14 @@ class AppStore: ObservableObject {
         guard !relevant.isEmpty else { return nil }
 
         let done = relevant.values.filter { $0 == 1 }.count
+        let total = relevant.count
         if done == 0 { return DayStatus.none }
-        if done == relevant.count { return DayStatus.all }
-        return DayStatus.partial
+
+        let pct = Double(done) / Double(total) * 100.0
+        if pct <= 25 { return .low }
+        if pct <= 50 { return .medium }
+        if pct <= 75 { return .high }
+        return .full
     }
 
     func saveDay(date: String, values: [String: Bool]) {

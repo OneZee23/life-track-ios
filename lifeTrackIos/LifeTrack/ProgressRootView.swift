@@ -1,7 +1,13 @@
 import SwiftUI
 
 enum ProgressLevel {
-    case year, month, week, day
+    case year, month, week, day, analytics, monthAnalytics
+}
+
+enum NavSource {
+    case normal
+    case yearAnalytics
+    case monthAnalytics
 }
 
 struct ProgressRootView: View {
@@ -10,7 +16,7 @@ struct ProgressRootView: View {
     // Navigation state
     @State private var level: ProgressLevel = .month
     @State private var topLevel: ProgressLevel = .month  // year или month (переключатель)
-    @State private var filterHabitId: String? = nil
+    @State private var navSource: NavSource = .normal
 
     // Navigation targets
     @State private var navYear: Int = Calendar.current.component(.year, from: Date())
@@ -25,27 +31,29 @@ struct ProgressRootView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     headerSection
-                    filterChips
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
 
                     Group {
                         switch level {
                         case .year:
                             YearProgressView(
                                 year: navYear,
-                                filterHabitId: filterHabitId,
                                 onYearChange: { navYear = $0 },
-                                onMonthTap: { m in
-                                    navMonth = m
-                                    withAnimation { level = .month; topLevel = .month }
+                                onDayTap: { date in
+                                    let cal = Calendar.current
+                                    navMonth = cal.component(.month, from: date) - 1
+                                    navYear = cal.component(.year, from: date)
+                                    navWeekStart = weekStart(for: date)
+                                    navDay = date
+                                    withAnimation { level = .week }
+                                },
+                                onAnalyticsTap: {
+                                    withAnimation { level = .analytics }
                                 }
                             )
                         case .month:
                             MonthProgressView(
                                 year: navYear,
                                 month: navMonth,
-                                filterHabitId: filterHabitId,
                                 onMonthChange: { newMonth in
                                     var m = newMonth
                                     var y = navYear
@@ -57,12 +65,14 @@ struct ProgressRootView: View {
                                     navWeekStart = weekStart(for: date)
                                     navDay = date
                                     withAnimation { level = .week }
+                                },
+                                onAnalyticsTap: {
+                                    withAnimation { level = .monthAnalytics }
                                 }
                             )
                         case .week:
                             WeekProgressView(
                                 weekStartDate: navWeekStart,
-                                filterHabitId: filterHabitId,
                                 onWeekChange: { navWeekStart = $0 },
                                 onDayTap: { date in
                                     navDay = date
@@ -72,7 +82,36 @@ struct ProgressRootView: View {
                         case .day:
                             DayProgressView(
                                 date: navDay,
-                                filterHabitId: filterHabitId
+                                onDayChange: { date in
+                                    navDay = date
+                                }
+                            )
+                        case .analytics:
+                            YearAnalyticsView(
+                                year: navYear,
+                                onYearChange: { navYear = $0 },
+                                onMonthTap: { month in
+                                    navMonth = month
+                                    navSource = .yearAnalytics
+                                    withAnimation { level = .month }
+                                }
+                            )
+                        case .monthAnalytics:
+                            MonthAnalyticsView(
+                                year: navYear,
+                                month: navMonth,
+                                onMonthChange: { newMonth in
+                                    var m = newMonth
+                                    var y = navYear
+                                    if m < 0 { m = 11; y -= 1 }
+                                    else if m > 11 { m = 0; y += 1 }
+                                    navMonth = m; navYear = y
+                                },
+                                onWeekTap: { weekDate in
+                                    navWeekStart = weekDate
+                                    navSource = .monthAnalytics
+                                    withAnimation { level = .week }
+                                }
                             )
                         }
                     }
@@ -87,7 +126,7 @@ struct ProgressRootView: View {
 
     var headerSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if level == .year || level == .month {
+            if (level == .year || level == .month) && navSource == .normal {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L10n.progress)
                         .font(.system(size: 32, weight: .bold))
@@ -97,12 +136,12 @@ struct ProgressRootView: View {
                     HStack(spacing: 0) {
                         segButton(title: L10n.month, selected: topLevel == .month) {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                topLevel = .month; level = .month
+                                topLevel = .month; level = .month; navSource = .normal
                             }
                         }
                         segButton(title: L10n.year, selected: topLevel == .year) {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                topLevel = .year; level = .year
+                                topLevel = .year; level = .year; navSource = .normal
                             }
                         }
                     }
@@ -119,18 +158,42 @@ struct ProgressRootView: View {
                 // Back button
                 HStack {
                     Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            if level == .week { level = .month }
-                            else if level == .day { level = .week }
+                            switch (level, navSource) {
+                            // Year analytics path
+                            case (.analytics, _):
+                                level = .year; navSource = .normal
+                            case (.month, .yearAnalytics):
+                                level = .analytics
+                            case (.week, .yearAnalytics):
+                                level = .month
+                            case (.day, .yearAnalytics):
+                                level = .week
+
+                            // Month analytics path
+                            case (.monthAnalytics, _):
+                                level = .month; navSource = .normal
+                            case (.week, .monthAnalytics):
+                                level = .monthAnalytics
+                            case (.day, .monthAnalytics):
+                                level = .week
+
+                            // Normal path
+                            case (.week, .normal):
+                                level = topLevel
+                            case (.day, .normal):
+                                level = .week
+                            default:
+                                break
+                            }
                         }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text(level == .week
-                                 ? L10n.monthsFull[navMonth]
-                                 : L10n.week)
-                            .font(.system(size: 16, weight: .medium))
+                            Text(backLabel)
+                                .font(.system(size: 16, weight: .medium))
                         }
                         .foregroundColor(Color(UIColor.systemBlue))
                     }
@@ -143,26 +206,24 @@ struct ProgressRootView: View {
         }
     }
 
-    // MARK: - Filter chips
-
-    var filterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                chipButton(label: L10n.all, active: filterHabitId == nil) {
-                    withAnimation { filterHabitId = nil }
-                }
-                ForEach(store.activeHabits) { habit in
-                    chipButton(
-                        label: "\(habit.emoji) \(habit.name)",
-                        active: filterHabitId == habit.id
-                    ) {
-                        withAnimation {
-                            filterHabitId = filterHabitId == habit.id ? nil : habit.id
-                        }
-                    }
-                }
-            }
-            .padding(.vertical, 2)
+    private var backLabel: String {
+        switch (level, navSource) {
+        case (.analytics, _):
+            return String(navYear)
+        case (.monthAnalytics, _):
+            return L10n.monthsFull[navMonth]
+        case (.month, .yearAnalytics):
+            return L10n.detailedAnalytics
+        case (.week, .yearAnalytics):
+            return L10n.monthsFull[navMonth]
+        case (.week, .monthAnalytics):
+            return L10n.detailedAnalytics
+        case (.week, .normal):
+            return topLevel == .year ? String(navYear) : L10n.monthsFull[navMonth]
+        case (.day, _):
+            return L10n.week
+        default:
+            return ""
         }
     }
 
@@ -170,7 +231,10 @@ struct ProgressRootView: View {
 
     @ViewBuilder
     func segButton(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
             Text(title)
                 .font(.system(size: 13, weight: selected ? .semibold : .medium))
                 .foregroundColor(selected ? .primary : .secondary)
@@ -189,18 +253,4 @@ struct ProgressRootView: View {
         }
     }
 
-    @ViewBuilder
-    func chipButton(label: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(active ? .white : .primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(
-                    Capsule()
-                        .fill(active ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                )
-        }
-    }
 }

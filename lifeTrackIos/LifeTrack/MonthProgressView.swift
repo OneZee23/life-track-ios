@@ -5,9 +5,9 @@ struct MonthProgressView: View {
 
     let year: Int
     let month: Int
-    let filterHabitId: String?
     let onMonthChange: (Int) -> Void
     let onDayTap: (Date) -> Void
+    let onAnalyticsTap: () -> Void
 
     private var now: Date { Date() }
 
@@ -30,6 +30,9 @@ struct MonthProgressView: View {
 
             // Streaks
             streakCards
+
+            // Analytics button
+            analyticsButton
         }
     }
 
@@ -75,46 +78,43 @@ struct MonthProgressView: View {
     @ViewBuilder
     func dayCell(cell: MonthCell) -> some View {
         let today = isToday(cell.date)
-        let isDone: Bool = {
-            if let s = cell.status { return s != .none }
-            return false
-        }()
+        let status = cell.status ?? .none
+        let isFutureDate = cell.date > now && !today
 
         Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onDayTap(cell.date)
         } label: {
             ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isFutureDate ? Color(UIColor.systemGray6) : status.color)
+
                 if today {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
                     RoundedRectangle(cornerRadius: 10)
                         .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                         .modifier(PulseModifier())
-                } else {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(isDone ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
                 }
 
                 Text("\(cell.day)")
                     .font(.system(size: 12, weight: today ? .bold : .medium))
                     .foregroundColor(
                         today
-                            ? (isDone ? .white : Color(UIColor.systemOrange))
-                            : (isDone ? .white : Color(UIColor.systemGray3))
+                            ? (status != .none ? .white : Color(UIColor.systemOrange))
+                            : (status.needsWhiteText ? .white : Color(UIColor.systemGray3))
                     )
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(1, contentMode: .fit)
         }
         .buttonStyle(SpringButtonStyle())
-        .disabled(cell.date > now && !today)
+        .disabled(isFutureDate)
     }
 
     // MARK: - Streaks
 
     var streakCards: some View {
-        let best = store.bestStreak(year: year, month: month, habitId: filterHabitId)
-        let cur = store.currentStreak(year: year, month: month, habitId: filterHabitId)
+        let best = store.bestStreak(year: year, month: month)
+        let cur = store.currentStreak(year: year, month: month)
         return HStack(spacing: 8) {
             streakCard(label: L10n.bestStreak, value: best)
             streakCard(label: L10n.currentStreak, value: cur)
@@ -146,10 +146,37 @@ struct MonthProgressView: View {
         )
     }
 
+    // MARK: - Analytics button
+
+    var analyticsButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onAnalyticsTap()
+        } label: {
+            HStack {
+                Text(L10n.detailedAnalytics)
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(Color(UIColor.systemGreen))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(UIColor.systemGreen).opacity(0.1))
+            )
+        }
+    }
+
     // MARK: - Nav
 
     func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(UIColor.systemGray5))
@@ -173,7 +200,7 @@ struct MonthProgressView: View {
             let ds = formatDate(d)
             let status: DayStatus? = (isFuture(d) && !isToday(d))
                 ? nil
-                : store.dayStatus(date: ds, habitId: filterHabitId)
+                : store.dayStatus(date: ds)
             cells.append(MonthCell(day: day, date: d, status: status))
         }
         while cells.count % 7 != 0 { cells.append(nil) }
