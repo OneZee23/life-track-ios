@@ -1,19 +1,33 @@
 import SwiftUI
 
+private enum SelectedDay: Equatable {
+    case yesterday
+    case today
+}
+
 struct CheckInView: View {
     @EnvironmentObject var store: AppStore
-    @State private var values: [String: Bool] = [:]
-    @State private var saved = false
+    @State private var selectedDay: SelectedDay = .yesterday
     @State private var showSettings = false
-    @State private var showCelebration = false
     @State private var showConfetti = false
 
-    private var dateStr: String { formatDate(yesterday()) }
-    private var doneCount: Int { values.values.filter { $0 }.count }
+    private var dateStr: String {
+        switch selectedDay {
+        case .yesterday: return formatDate(yesterday())
+        case .today:     return formatDate(Date())
+        }
+    }
+
+    private var doneCount: Int {
+        store.activeHabits.filter {
+            store.checkinValue(habitId: $0.id, date: dateStr) == 1
+        }.count
+    }
+
     private var total: Int { store.activeHabits.count }
 
-    private var habitChipColumns: Int {
-        min(store.activeHabits.count, 6)
+    private func isDone(_ habitId: String) -> Bool {
+        store.checkinValue(habitId: habitId, date: dateStr) == 1
     }
 
     var body: some View {
@@ -23,17 +37,13 @@ struct CheckInView: View {
 
             ScrollView {
                 VStack(spacing: 0) {
-                    if saved {
-                        savedContent
-                    } else {
-                        checkInContent
-                    }
+                    checkInContent
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
             }
 
-            // Fixed gear button — always pinned top-right, never moves
+            // Fixed gear button — always pinned top-right
             HStack {
                 Spacer()
                 Button { showSettings = true } label: {
@@ -55,7 +65,7 @@ struct CheckInView: View {
                     .ignoresSafeArea()
             }
         }
-        .onAppear { initValues() }
+        .onAppear { showConfetti = false }
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
@@ -65,28 +75,29 @@ struct CheckInView: View {
 
     var checkInContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header (gear button is in the ZStack overlay, placeholder keeps layout)
+            // Header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.checkIn)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.primary)
-                    Text("\(L10n.yesterdayPrefix), \(L10n.yesterdayLabel())")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
                 Spacer()
                 Color.clear.frame(width: 36, height: 36)
             }
             .padding(.top, 16)
-            .padding(.bottom, 20)
+            .padding(.bottom, 12)
+
+            // Day selector
+            daySelectorView
+                .padding(.bottom, 20)
 
             // Habit cards
             VStack(spacing: 8) {
                 ForEach(Array(store.activeHabits.enumerated()), id: \.element.id) { index, habit in
                     HabitToggleCard(
                         habit: habit,
-                        isDone: values[habit.id] ?? false,
+                        isDone: isDone(habit.id),
                         onToggle: { toggle(habitId: habit.id) }
                     )
                     .transition(.asymmetric(
@@ -124,196 +135,96 @@ struct CheckInView: View {
                     .frame(minWidth: 32, alignment: .trailing)
             }
             .padding(.vertical, 16)
-
-            // Done button
-            Button {
-                saveChekin()
-            } label: {
-                Text(L10n.doneButton)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color(UIColor.systemGreen))
-                    )
-            }
-            .buttonStyle(SpringButtonStyle())
         }
     }
 
-    // MARK: - Saved state
+    // MARK: - Day Selector
 
-    var savedContent: some View {
-        VStack(spacing: 0) {
-            // Placeholder matching the height of the overlay gear button row
-            Color.clear.frame(height: 68)
-
-            // Celebration
-            ZStack {
-                Circle()
-                    .fill(Color(UIColor.systemGreen).opacity(0.15))
-                    .frame(width: 80, height: 80)
-                Text("🎉")
-                    .font(.system(size: 40))
-            }
-            .scaleEffect(showCelebration ? 1 : 0.5)
-            .opacity(showCelebration ? 1 : 0)
-            .animation(.spring(response: 0.45, dampingFraction: 0.6), value: showCelebration)
-            .padding(.bottom, 16)
-
-            Text(L10n.daySaved)
-                .font(.system(size: 24, weight: .bold))
-                .padding(.bottom, 6)
-
-            Text(L10n.comeBackTomorrow)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .padding(.bottom, 28)
-
-            // Summary card
-            VStack(spacing: 6) {
-                HStack(alignment: .bottom, spacing: 4) {
-                    Text("\(doneCount)")
-                        .font(.system(size: 52, weight: .black, design: .rounded))
-                        .foregroundColor(Color(UIColor.systemGreen))
-                    Text("/\(total)")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .padding(.bottom, 10)
-                }
-                Text(L10n.habitsCompleted)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(UIColor.systemGroupedBackground))
-            )
-            .padding(.bottom, 16)
-
-            // Habit chips
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: habitChipColumns),
-                spacing: 8
+    private var daySelectorView: some View {
+        HStack(spacing: 0) {
+            dayPill(
+                label: L10n.yesterdayPrefix,
+                sublabel: L10n.dateLabel(for: yesterday()),
+                isSelected: selectedDay == .yesterday
             ) {
-                ForEach(store.activeHabits) { habit in
-                    let done = values[habit.id] ?? false
-                    ZStack {
-                        Circle()
-                            .fill(done
-                                  ? Color(UIColor.systemGreen).opacity(0.15)
-                                  : Color(UIColor.systemGray5))
-                        Text(habit.emoji)
-                            .font(.system(size: 20))
-                            .opacity(done ? 1.0 : 0.35)
-                    }
-                    .aspectRatio(1, contentMode: .fit)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedDay = .yesterday
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 24)
 
-            Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                    saved = false
-                    showCelebration = false
-                    showConfetti = false
+            dayPill(
+                label: L10n.today,
+                sublabel: L10n.dateLabel(for: Date()),
+                isSelected: selectedDay == .today
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedDay = .today
                 }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 12, weight: .medium))
-                    Text(L10n.editCheckin)
-                        .font(.system(size: 13, weight: .medium))
-                }
-                .foregroundColor(.secondary)
             }
-            .padding(.bottom, 20)
         }
-        .frame(maxWidth: .infinity)
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.systemGray5))
+        )
+    }
+
+    private func dayPill(
+        label: String,
+        sublabel: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Text(label)
+                    .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+                Text(sublabel)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(isSelected ? .primary.opacity(0.7) : .secondary)
+            }
+            .foregroundColor(isSelected ? .primary : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                Group {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(UIColor.secondarySystemGroupedBackground))
+                            .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
 
-    private func initValues() {
-        var newValues: [String: Bool] = [:]
-        for habit in store.activeHabits {
-            newValues[habit.id] = store.checkinValue(habitId: habit.id, date: dateStr) == 1
-        }
-        values = newValues
-        showConfetti = false
-        if store.checkins[dateStr] != nil {
-            saved = true
-            showCelebration = true
-        }
-    }
-
     private func toggle(habitId: String) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
-            values[habitId] = !(values[habitId] ?? false)
+            store.toggleCheckin(habitId: habitId, date: dateStr)
+        }
+
+        // Check if all habits are now done — trigger celebration
+        let newDoneCount = store.activeHabits.filter {
+            store.checkinValue(habitId: $0.id, date: dateStr) == 1
+        }.count
+
+        if newDoneCount == total && total > 0 {
+            triggerCelebration()
         }
     }
 
-    private func saveChekin() {
-        store.saveDay(date: dateStr, values: values)
+    private func triggerCelebration() {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-            saved = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation { showCelebration = true }
+        // Reset confetti to allow re-trigger
+        showConfetti = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             showConfetti = true
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.05) {
             showConfetti = false
-        }
-    }
-}
-
-// MARK: - Flow Layout (для чипов)
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? 300
-        var height: CGFloat = 0
-        var rowWidth: CGFloat = 0
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if rowWidth + size.width > maxWidth, rowWidth > 0 {
-                height += rowHeight + spacing
-                rowWidth = 0
-                rowHeight = 0
-            }
-            rowWidth += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        height += rowHeight
-        return CGSize(width: maxWidth, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                y += rowHeight + spacing
-                x = bounds.minX
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
         }
     }
 }

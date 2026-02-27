@@ -15,11 +15,6 @@ enum L10n {
 
     static let checkIn          = isRu ? "Чек-ин"              : "Check-in"
     static let yesterdayPrefix  = isRu ? "Вчера"               : "Yesterday"
-    static let doneButton       = isRu ? "Готово ✓"            : "Done ✓"
-    static let daySaved         = isRu ? "День записан!"       : "Day saved!"
-    static let comeBackTomorrow = isRu ? "Возвращайся завтра"  : "Come back tomorrow"
-    static let habitsCompleted  = isRu ? "привычек выполнено"  : "habits completed"
-    static let editCheckin      = isRu ? "Изменить"            : "Edit"
 
     // MARK: - Habits
 
@@ -146,15 +141,13 @@ enum L10n {
 
     // MARK: - Date formatting
 
-    static func yesterdayLabel() -> String {
-        let d = yesterday()
-        let day = Calendar.current.component(.day, from: d)
-        let monthIdx = Calendar.current.component(.month, from: d) - 1
-        let wdIdx = weekdayIndex(d)
+    static func dateLabel(for date: Date) -> String {
+        let day = Calendar.current.component(.day, from: date)
+        let monthIdx = Calendar.current.component(.month, from: date) - 1
         if isRu {
-            return "\(day) \(monthsGenitive[monthIdx]), \(weekdaysFull[wdIdx].lowercased())"
+            return "\(day) \(monthsGenitive[monthIdx])"
         } else {
-            return "\(weekdaysFull[wdIdx]), \(monthsGenitive[monthIdx]) \(day)"
+            return "\(monthsGenitive[monthIdx]) \(day)"
         }
     }
 
