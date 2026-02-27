@@ -282,6 +282,15 @@ Open development, "Proof of Work" Season 2:
 
 ---
 
+## Versioning
+
+- **0.X** (0.1, 0.2, 0.3) — stable, tested releases (App Store)
+- **0.X.Y** (0.1.1, 0.2.1) — incremental updates, untested builds
+
+Details in [CHANGELOG.md](./CHANGELOG.md).
+
+---
+
 ## License
 
 MIT
