@@ -25,14 +25,14 @@ struct DayProgressView: View {
         VStack(spacing: 16) {
             // Day header
             VStack(spacing: 4) {
-                Text(weekdaysFullRu[weekdayIndex(date)])
+                Text(L10n.weekdaysFull[weekdayIndex(date)])
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
-                Text(verbatim: "\(Calendar.current.component(.day, from: date)) \(monthsGenitiveRu[Calendar.current.component(.month, from: date) - 1]) \(String(Calendar.current.component(.year, from: date)))")
+                Text(verbatim: L10n.dayDateLabel(date: date))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 if today {
-                    Text("Ожидает чек-ина")
+                    Text(L10n.awaitingCheckIn)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(Color(UIColor.systemGreen))
                         .padding(.top, 2)
@@ -91,7 +91,7 @@ struct DayProgressView: View {
             }
 
             if !today && !visibleHabits.isEmpty {
-                Text(doneCount == visibleHabits.count ? "Все выполнено!" : doneCount > 0 ? "Частично" : "Не выполнено")
+                Text(doneCount == visibleHabits.count ? L10n.allDone : doneCount > 0 ? L10n.partial : L10n.notDone)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(
                         doneCount == visibleHabits.count

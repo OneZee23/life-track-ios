@@ -20,14 +20,14 @@ struct HabitsView: View {
                 // Custom header
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Привычки")
+                        Text(L10n.habits)
                             .font(.system(size: 32, weight: .bold))
-                        Text("\(store.activeHabits.count) из 10")
+                        Text(L10n.habitsCount(store.activeHabits.count))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(editMode == .active ? "Готово" : "Изменить") {
+                    Button(editMode == .active ? L10n.done : L10n.edit) {
                         withAnimation {
                             editMode = editMode == .active ? .inactive : .active
                         }
@@ -66,7 +66,7 @@ struct HabitsView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("Добавить привычку")
+                            Text(L10n.addHabit)
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(Color(UIColor.systemGreen))
@@ -81,7 +81,7 @@ struct HabitsView: View {
                     .padding(.bottom, 20)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if store.activeHabits.count >= 10 {
-                    Text("Максимум 10 привычек")
+                    Text(L10n.maxHabits)
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                         .padding(.bottom, 12)
@@ -144,7 +144,7 @@ struct HabitRow: View {
         .padding(.vertical, 4)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive, action: onDelete) {
-                Label("Удалить", systemImage: "trash")
+                Label(L10n.delete, systemImage: "trash")
             }
         }
     }
@@ -169,8 +169,8 @@ struct HabitFormView: View {
 
     private var title: String {
         switch mode {
-        case .add: return "Новая привычка"
-        case .edit: return "Редактировать"
+        case .add: return L10n.newHabit
+        case .edit: return L10n.editHabit
         }
     }
 
@@ -209,7 +209,7 @@ struct HabitFormView: View {
                         }
 
                         ZStack(alignment: .trailing) {
-                            TextField("Название", text: $name)
+                            TextField(L10n.name, text: $name)
                                 .font(.system(size: 16, weight: .medium))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 14)
@@ -267,7 +267,7 @@ struct HabitFormView: View {
                     // Buttons
                     HStack(spacing: 10) {
                         Button(action: onCancel) {
-                            Text("Отмена")
+                            Text(L10n.cancel)
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
@@ -279,7 +279,7 @@ struct HabitFormView: View {
                         }
 
                         Button(action: save) {
-                            Text(title == "Новая привычка" ? "Добавить" : "Сохранить")
+                            Text(title == L10n.newHabit ? L10n.add : L10n.save)
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(canSave ? .white : .secondary)
                                 .frame(maxWidth: .infinity)
@@ -300,7 +300,7 @@ struct HabitFormView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Отмена", action: onCancel)
+                    Button(L10n.cancel, action: onCancel)
                         .foregroundColor(Color(UIColor.systemGreen))
                 }
             }

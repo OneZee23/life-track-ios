@@ -20,7 +20,7 @@ struct SettingsView: View {
                         }
                     )) {
                         Label {
-                            Text("Тёмная тема")
+                            Text(L10n.darkTheme)
                         } icon: {
                             ZStack {
                                 if store.isDark {
@@ -38,85 +38,85 @@ struct SettingsView: View {
                     }
                     .tint(Color(UIColor.systemGreen))
                 } header: {
-                    Text("Внешний вид")
+                    Text(L10n.appearance)
                 }
 
-                // О проекте
+                // About
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("LifeTrack — минималистичный трекер привычек. Отмечай вчерашний день за 5 секунд, смотри прогресс на тепловой карте. Без оценок, без стресса — просто делал или не делал.")
+                        Text(L10n.aboutDescription)
                             .font(.system(size: 14))
                             .foregroundColor(.primary)
                             .lineSpacing(3)
 
-                        Text("Это MVP — приложение создаётся открыто, вместе с сообществом. Весь процесс в Telegram-канале.")
+                        Text(L10n.aboutMVP)
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                             .lineSpacing(3)
 
-                        Text("Автор — OneZee, инди-разработчик.")
+                        Text(L10n.aboutAuthor)
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                             .lineSpacing(3)
                     }
                     .padding(.vertical, 4)
                 } header: {
-                    Text("О проекте")
+                    Text(L10n.aboutProject)
                 }
 
-                // Обратная связь
+                // Feedback
                 Section {
                     linkRow(
                         icon: "paperplane.fill",
                         iconColor: .blue,
-                        title: "Написать автору",
-                        subtitle: "Баги, идеи, предложения",
+                        title: L10n.writeAuthor,
+                        subtitle: L10n.bugsIdeas,
                         url: "https://t.me/onezee"
                     )
                 } header: {
-                    Text("Обратная связь")
+                    Text(L10n.feedback)
                 }
 
-                // Ссылки
+                // Links
                 Section {
                     linkRow(
                         icon: "paperplane.fill",
                         iconColor: .blue,
-                        title: "Telegram-канал",
-                        subtitle: "Разработка LifeTrack в реальном времени",
+                        title: L10n.telegramChannel,
+                        subtitle: L10n.telegramSubtitle,
                         url: "https://t.me/onezee"
                     )
                     linkRow(
                         icon: "play.rectangle.fill",
                         iconColor: .red,
                         title: "YouTube",
-                        subtitle: "Канал автора",
+                        subtitle: L10n.youtubeSubtitle,
                         url: "https://youtube.com"
                     )
                 } header: {
-                    Text("Ссылки")
+                    Text(L10n.links)
                 }
 
-                // Версия
+                // Version
                 Section {
                     HStack {
-                        Text("Версия")
+                        Text(L10n.version)
                             .foregroundColor(.primary)
                         Spacer()
                         Text("0.1.0 (native)")
                             .foregroundColor(.secondary)
                     }
                 } footer: {
-                    Text("LifeTrack Native MVP — сделано с душой ♥")
+                    Text(L10n.footerMVP)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 8)
                 }
             }
-            .navigationTitle("Настройки")
+            .navigationTitle(L10n.settings)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Готово") { dismiss() }
+                    Button(L10n.done) { dismiss() }
                         .foregroundColor(Color(UIColor.systemGreen))
                 }
             }

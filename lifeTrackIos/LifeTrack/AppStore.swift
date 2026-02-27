@@ -198,11 +198,7 @@ class AppStore: ObservableObject {
     }
 
     private func seedDefaults() {
-        let defaults: [(String, String)] = [
-            ("🛌", "Сон"), ("🚴", "Активность"), ("🥗", "Питание"),
-            ("🧠", "Ментальное"), ("💻", "Проекты")
-        ]
-        habits = defaults.enumerated().map { i, d in
+        habits = L10n.defaultHabits.enumerated().map { i, d in
             Habit(name: d.1, emoji: d.0, sortOrder: i)
         }
         save()

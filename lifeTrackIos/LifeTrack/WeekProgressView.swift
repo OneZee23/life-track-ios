@@ -21,9 +21,9 @@ struct WeekProgressView: View {
         let m1 = Calendar.current.component(.month, from: first) - 1
         let m2 = Calendar.current.component(.month, from: last) - 1
         if m1 == m2 {
-            return "\(d1)–\(d2) \(monthsFullRu[m1])"
+            return "\(d1)–\(d2) \(L10n.monthsFull[m1])"
         } else {
-            return "\(d1) \(monthsShortRu[m1]) – \(d2) \(monthsShortRu[m2])"
+            return "\(d1) \(L10n.monthsShort[m1]) – \(d2) \(L10n.monthsShort[m2])"
         }
     }
 
@@ -82,7 +82,7 @@ struct WeekProgressView: View {
 
                 Button { onDayTap(day) } label: {
                     VStack(spacing: 4) {
-                        Text(weekdaysShortRu[i])
+                        Text(L10n.weekdaysShort[i])
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(today ? Color(UIColor.systemGreen) : .secondary)
 
@@ -211,7 +211,7 @@ struct WeekProgressView: View {
         let totalDays = days.filter { !isFuture($0) && !isToday($0) }.count
 
         return HStack {
-            Text("Итог недели")
+            Text(L10n.weekTotal)
                 .font(.system(size: 14))
                 .foregroundColor(.primary)
             Spacer()
