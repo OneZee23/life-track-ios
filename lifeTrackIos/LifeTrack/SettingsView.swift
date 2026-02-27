@@ -98,7 +98,7 @@ struct SettingsView: View {
                         Text(L10n.version)
                             .foregroundColor(.primary)
                         Spacer()
-                        Text("0.1.0 (native)")
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                             .foregroundColor(.secondary)
                     }
                 } footer: {
