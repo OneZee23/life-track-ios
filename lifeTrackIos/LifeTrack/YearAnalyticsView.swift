@@ -162,6 +162,15 @@ struct YearAnalyticsView: View {
                 }
             }
             .frame(height: 5)
+
+            if item.tracked > 0 {
+                HStack {
+                    Text(L10n.checkinsOf(item.done, item.tracked))
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(UIColor.systemGray3))
+                    Spacer()
+                }
+            }
         }
     }
 

@@ -43,6 +43,7 @@ struct MonthProgressView: View {
         let rows = stride(from: 0, to: cells.count, by: 7).map {
             Array(cells[$0..<min($0 + 7, cells.count)])
         }
+        let weekRates = computeWeeklyRates(rows: rows)
 
         return VStack(spacing: 4) {
             // Weekday headers
@@ -53,10 +54,11 @@ struct MonthProgressView: View {
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity)
                 }
+                Color.clear.frame(width: 32)
             }
 
-            // Day cells
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+            // Day cells + weekly indicator
+            ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
                 HStack(spacing: 4) {
                     ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
                         if let cell = cell {
@@ -65,6 +67,7 @@ struct MonthProgressView: View {
                             Color.clear.frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
                         }
                     }
+                    weekProgressIndicator(rate: weekRates[idx])
                 }
             }
         }
@@ -73,6 +76,41 @@ struct MonthProgressView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(UIColor.secondarySystemGroupedBackground))
         )
+    }
+
+    @ViewBuilder
+    func weekProgressIndicator(rate: Double) -> some View {
+        if rate < 0 {
+            Color.clear.frame(width: 32)
+        } else {
+            VStack(spacing: 2) {
+                GeometryReader { geo in
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(weekBarColor(rate: rate))
+                            .frame(height: geo.size.height * CGFloat(rate / 100.0))
+                    }
+                }
+                .frame(width: 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(UIColor.systemGray5))
+                )
+
+                Text("\(Int(rate))%")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(rate >= 75 ? Color(UIColor.systemGreen) : .secondary)
+            }
+            .frame(width: 32)
+        }
+    }
+
+    func weekBarColor(rate: Double) -> Color {
+        if rate >= 75 { return Color(UIColor.systemGreen) }
+        if rate >= 50 { return Color(UIColor.systemGreen).opacity(0.75) }
+        if rate >= 25 { return Color(UIColor.systemGreen).opacity(0.50) }
+        return Color(UIColor.systemGreen).opacity(0.25)
     }
 
     @ViewBuilder
@@ -189,6 +227,29 @@ struct MonthProgressView: View {
     }
 
     // MARK: - Data
+
+    func computeWeeklyRates(rows: [[MonthCell?]]) -> [Double] {
+        let habits = store.activeHabits
+        guard !habits.isEmpty else { return rows.map { _ in -1 } }
+
+        return rows.map { row in
+            var done = 0, tracked = 0
+            for cell in row {
+                guard let cell = cell else { continue }
+                if isFuture(cell.date) && !isToday(cell.date) { continue }
+                let ds = formatDate(cell.date)
+                for habit in habits {
+                    if store.checkins[ds]?[habit.id] != nil {
+                        tracked += 1
+                        if store.checkinValue(habitId: habit.id, date: ds) == 1 {
+                            done += 1
+                        }
+                    }
+                }
+            }
+            return tracked > 0 ? Double(done) / Double(tracked) * 100.0 : -1
+        }
+    }
 
     func buildCells() -> [MonthCell?] {
         let days = daysInMonth(year: year, month: month)

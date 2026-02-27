@@ -53,6 +53,7 @@ enum L10n {
     static var telegramChannel:  String { isRu ? "Telegram-канал" : "Telegram channel" }
     static var telegramSubtitle: String { isRu ? "Разработка LifeTrack в реальном времени" : "LifeTrack development in real time" }
     static var youtubeSubtitle:  String { isRu ? "Канал автора"  : "Author's channel" }
+    static var githubSubtitle:   String { isRu ? "Открытый исходный код" : "Open-source project" }
     static var version:          String { isRu ? "Версия"       : "Version" }
 
     static var aboutDescription: String {

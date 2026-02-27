@@ -88,6 +88,13 @@ struct SettingsView: View {
                         subtitle: L10n.youtubeSubtitle,
                         url: "https://youtube.com"
                     )
+                    linkRow(
+                        icon: "chevron.left.forwardslash.chevron.right",
+                        iconColor: Color(UIColor.systemGray),
+                        title: "GitHub",
+                        subtitle: L10n.githubSubtitle,
+                        url: "https://github.com/OneZee23/life-track-ios"
+                    )
                 } header: {
                     Text(L10n.links)
                 }
