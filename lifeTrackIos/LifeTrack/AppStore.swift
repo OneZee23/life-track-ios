@@ -171,17 +171,28 @@ class AppStore: ObservableObject {
 
     // MARK: - Theme
 
-    var preferredColorScheme: ColorScheme? {
-        switch themeMode {
-        case "light": return .light
-        case "dark":  return .dark
-        default:      return nil  // follow system
-        }
-    }
-
     func setTheme(_ mode: String) {
         themeMode = mode
         save()
+        applyThemeToWindows()
+    }
+
+    /// Applies the theme override directly to UIKit windows.
+    /// This ensures sheets and other presented controllers follow the theme immediately.
+    func applyThemeToWindows() {
+        let style: UIUserInterfaceStyle = {
+            switch themeMode {
+            case "light": return .light
+            case "dark":  return .dark
+            default:      return .unspecified
+            }
+        }()
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.overrideUserInterfaceStyle = style
+            }
+        }
     }
 
     // MARK: - Language
