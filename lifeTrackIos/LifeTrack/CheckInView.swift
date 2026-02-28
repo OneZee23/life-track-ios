@@ -16,11 +16,12 @@ struct CheckInView: View {
     @State private var hideWork: DispatchWorkItem?
     @State private var confettiWork: DispatchWorkItem?
 
+    private var viewedDate: Date {
+        selectedDay == .yesterday ? yesterday() : Date()
+    }
+
     private var dateStr: String {
-        switch selectedDay {
-        case .yesterday: return formatDate(yesterday())
-        case .today:     return formatDate(Date())
-        }
+        formatDate(viewedDate)
     }
 
     private var doneCount: Int {
@@ -132,6 +133,7 @@ struct CheckInView: View {
                     HabitToggleCard(
                         habit: habit,
                         isDone: isDone(habit.id),
+                        streak: habitStreak(for: habit),
                         onToggle: { toggle(habitId: habit.id) }
                     )
                     .transition(.asymmetric(
@@ -237,6 +239,14 @@ struct CheckInView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Streak
+
+    private func habitStreak(for habit: Habit) -> Int {
+        let dayBefore = Calendar.current.date(byAdding: .day, value: -1, to: viewedDate)!
+        let baseStreak = store.habitStreak(habitId: habit.id, asOf: dayBefore)
+        return isDone(habit.id) ? baseStreak + 1 : baseStreak
     }
 
     // MARK: - Actions

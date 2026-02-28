@@ -9,12 +9,16 @@ struct YearAnalyticsView: View {
 
     private var currentYear: Int { Calendar.current.component(.year, from: Date()) }
 
+    private let miniCellSize: CGFloat = 10
+    private let miniCellSpacing: CGFloat = 2
+
     var body: some View {
         VStack(spacing: 16) {
             navHeader
             completionRateCard
             streakCards
             habitRankingCard
+            habitHeatmapsSection
             monthlyBreakdownCard
         }
     }
@@ -238,6 +242,201 @@ struct YearAnalyticsView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(Color(UIColor.systemGray3))
         }
+    }
+
+    // MARK: - Per-habit heatmaps
+
+    var habitHeatmapsSection: some View {
+        let habits = store.activeHabits
+        let stats = computeHabitStats()
+
+        return VStack(spacing: 12) {
+            HStack {
+                Text(L10n.habitActivity)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+            }
+
+            ForEach(habits, id: \.id) { habit in
+                let stat = stats.first { $0.habit.id == habit.id }
+                habitHeatmapCard(habit: habit, stat: stat)
+            }
+        }
+    }
+
+    func habitHeatmapCard(habit: Habit, stat: HabitStat?) -> some View {
+        let grid = buildHabitYearGrid(habitId: habit.id)
+        let rate = stat?.rate ?? 0
+        let done = stat?.done ?? 0
+        let tracked = stat?.tracked ?? 0
+        let streak = store.habitStreak(habitId: habit.id, asOf: yesterday())
+
+        return VStack(alignment: .leading, spacing: 8) {
+            // Header: emoji + name + rate
+            HStack(spacing: 8) {
+                Text(habit.emoji)
+                    .font(.system(size: 16))
+                Text(habit.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(tracked > 0 ? "\(Int(rate))%" : "—")
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(rate >= 75 ? Color(UIColor.systemGreen) : .secondary)
+            }
+
+            // Mini year heatmap
+            miniYearHeatmap(grid: grid, habitId: habit.id)
+
+            // Footer: streak + checkins
+            HStack(spacing: 0) {
+                if streak >= 2 {
+                    Text("🔥 \(streak) \(L10n.pluralDays(streak))")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color(UIColor.systemOrange))
+                    Text(" · ")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(UIColor.systemGray3))
+                }
+                if tracked > 0 {
+                    Text(L10n.checkinsOf(done, tracked))
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(UIColor.systemGray3))
+                }
+                Spacer()
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
+    }
+
+    func miniYearHeatmap(grid: YearGrid, habitId: String) -> some View {
+        let step = miniCellSize + miniCellSpacing
+
+        return ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 2) {
+                    // Month labels
+                    HStack(spacing: 0) {
+                        ZStack(alignment: .topLeading) {
+                            Color.clear
+                                .frame(
+                                    width: CGFloat(grid.columns.count) * step - miniCellSpacing,
+                                    height: 10
+                                )
+                            ForEach(Array(grid.monthLabels.enumerated()), id: \.offset) { _, item in
+                                Text(item.label)
+                                    .font(.system(size: 8, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .offset(x: CGFloat(item.column) * step)
+                            }
+                        }
+                    }
+                    .frame(height: 10)
+
+                    // Grid
+                    HStack(spacing: miniCellSpacing) {
+                        ForEach(0..<grid.columns.count, id: \.self) { col in
+                            VStack(spacing: miniCellSpacing) {
+                                ForEach(0..<7, id: \.self) { row in
+                                    miniCellView(cell: grid.columns[col][row])
+                                }
+                            }
+                            .id(col)
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                let targetCol = miniCurrentWeekColumn(grid: grid)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.none) {
+                        proxy.scrollTo(targetCol, anchor: .trailing)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    func miniCellView(cell: YearHeatmapCell?) -> some View {
+        if let cell = cell {
+            let status = cell.status ?? .none
+            let isFutureDate = isFuture(cell.date) && !isToday(cell.date)
+
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isFutureDate ? Color(UIColor.systemGray6) : status.color)
+                .frame(width: miniCellSize, height: miniCellSize)
+        } else {
+            Color.clear
+                .frame(width: miniCellSize, height: miniCellSize)
+        }
+    }
+
+    func miniCurrentWeekColumn(grid: YearGrid) -> Int {
+        let cal = Calendar.current
+        let jan1 = cal.date(from: DateComponents(year: year, month: 1, day: 1))!
+        let jan1Wd = weekdayIndex(jan1)
+        let startDate = cal.date(byAdding: .day, value: -jan1Wd, to: jan1)!
+        let today = Date()
+        let daysSinceStart = cal.dateComponents([.day], from: startDate, to: today).day ?? 0
+        let col = daysSinceStart / 7
+        return min(max(col, 0), grid.columns.count - 1)
+    }
+
+    func buildHabitYearGrid(habitId: String) -> YearGrid {
+        let cal = Calendar.current
+        let jan1 = cal.date(from: DateComponents(year: year, month: 1, day: 1))!
+        let jan1Wd = weekdayIndex(jan1)
+        let startDate = cal.date(byAdding: .day, value: -jan1Wd, to: jan1)!
+        let dec31 = cal.date(from: DateComponents(year: year, month: 12, day: 31))!
+        let dec31Wd = weekdayIndex(dec31)
+        let endDate = cal.date(byAdding: .day, value: 6 - dec31Wd, to: dec31)!
+        let totalDays = cal.dateComponents([.day], from: startDate, to: endDate).day! + 1
+        let totalColumns = totalDays / 7
+
+        var columns: [[YearHeatmapCell?]] = Array(
+            repeating: Array(repeating: nil, count: 7),
+            count: totalColumns
+        )
+        var monthLabels: [(label: String, column: Int)] = []
+        var currentMonth = -1
+        var lastLabelCol = -10
+
+        for dayOffset in 0..<totalDays {
+            let date = cal.date(byAdding: .day, value: dayOffset, to: startDate)!
+            let col = dayOffset / 7
+            let row = dayOffset % 7
+            let dateYear = cal.component(.year, from: date)
+            let month = cal.component(.month, from: date) - 1
+
+            if dateYear == year && month != currentMonth {
+                currentMonth = month
+                if col - lastLabelCol >= 4 {
+                    monthLabels.append((L10n.monthsShort[month], col))
+                    lastLabelCol = col
+                }
+            }
+
+            guard dateYear == year else {
+                columns[col][row] = nil
+                continue
+            }
+
+            let ds = formatDate(date)
+            let today = isToday(date)
+            let status: DayStatus? = (isFuture(date) && !today)
+                ? nil
+                : store.dayStatus(date: ds, habitId: habitId)
+            columns[col][row] = YearHeatmapCell(date: date, status: status)
+        }
+
+        return YearGrid(columns: columns, monthLabels: monthLabels)
     }
 
     // MARK: - Nav arrow

@@ -53,3 +53,9 @@ func isFuture(_ date: Date) -> Bool {
     date > Date()
 }
 
+func isBeyondTomorrow(_ date: Date) -> Bool {
+    let cal = Calendar.current
+    let tomorrow = cal.date(byAdding: .day, value: 1, to: Date())!
+    return cal.startOfDay(for: date) > cal.startOfDay(for: tomorrow)
+}
+

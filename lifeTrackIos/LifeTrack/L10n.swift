@@ -127,6 +127,7 @@ enum L10n {
     static var completionRate:    String { isRu ? "Процент выполнения"  : "Completion rate" }
     static var monthlyBreakdown:  String { isRu ? "По месяцам"          : "By month" }
     static var weeklyBreakdown:   String { isRu ? "По неделям"          : "By week" }
+    static var habitActivity:     String { isRu ? "Активность по привычкам" : "Activity by habit" }
 
     static func daysOf(_ done: Int, _ total: Int) -> String {
         isRu ? "\(done) из \(total) \(pluralDays(total))" : "\(done) of \(total) \(pluralDays(total))"

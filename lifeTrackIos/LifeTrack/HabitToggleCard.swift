@@ -3,6 +3,7 @@ import SwiftUI
 struct HabitToggleCard: View {
     let habit: Habit
     let isDone: Bool
+    let streak: Int
     let onToggle: () -> Void
 
     @State private var isPressed = false
@@ -25,11 +26,23 @@ struct HabitToggleCard: View {
                         .font(.system(size: 20))
                 }
 
-                // Name
-                Text(habit.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Name + streak
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(habit.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    if streak >= 2 {
+                        HStack(spacing: 3) {
+                            Text("🔥")
+                                .font(.system(size: 11))
+                            Text("\(streak) \(L10n.pluralDays(streak))")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Color(UIColor.systemOrange))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Toggle indicator
                 ZStack {

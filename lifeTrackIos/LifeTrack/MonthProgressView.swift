@@ -118,6 +118,7 @@ struct MonthProgressView: View {
         let today = isToday(cell.date)
         let status = cell.status ?? .none
         let isFutureDate = cell.date > now && !today
+        let tooFar = isBeyondTomorrow(cell.date)
 
         Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -145,7 +146,7 @@ struct MonthProgressView: View {
             .aspectRatio(1, contentMode: .fit)
         }
         .buttonStyle(SpringButtonStyle())
-        .disabled(isFutureDate)
+        .disabled(tooFar)
     }
 
     // MARK: - Streaks

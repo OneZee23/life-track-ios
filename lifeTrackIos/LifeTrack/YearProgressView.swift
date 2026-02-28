@@ -240,6 +240,7 @@ struct YearProgressView: View {
             let status = cell.status ?? .none
             let today = isToday(cell.date)
             let isFutureDate = isFuture(cell.date) && !today
+            let tooFar = isBeyondTomorrow(cell.date)
 
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -260,7 +261,7 @@ struct YearProgressView: View {
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
-            .disabled(isFutureDate)
+            .disabled(tooFar)
         } else {
             Color.clear
                 .frame(width: cellSize, height: cellSize)

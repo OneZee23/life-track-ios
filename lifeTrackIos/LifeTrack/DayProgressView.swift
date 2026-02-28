@@ -20,8 +20,7 @@ struct DayProgressView: View {
     }
 
     private var isFutureNextDay: Bool {
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: date)!
-        return isFuture(tomorrow) && !isToday(tomorrow)
+        isFuture(date) && !isToday(date)
     }
 
     var body: some View {

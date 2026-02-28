@@ -77,6 +77,8 @@ struct WeekProgressView: View {
                 }()
                 let isDone = status != .none
 
+                let tooFar = isBeyondTomorrow(day)
+
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     onDayTap(day)
@@ -133,6 +135,8 @@ struct WeekProgressView: View {
                     )
                 }
                 .buttonStyle(SpringButtonStyle())
+                .disabled(tooFar)
+                .opacity(tooFar ? 0.5 : 1.0)
             }
         }
     }

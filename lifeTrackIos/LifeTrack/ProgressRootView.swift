@@ -12,6 +12,7 @@ enum NavSource {
 
 struct ProgressRootView: View {
     @EnvironmentObject var store: AppStore
+    let resetID: UUID
 
     // Navigation state
     @State private var level: ProgressLevel = .month
@@ -118,6 +119,15 @@ struct ProgressRootView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 40)
                 }
+            }
+        }
+        .onChange(of: resetID) { _ in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                level = .month
+                topLevel = .month
+                navSource = .normal
+                navYear = Calendar.current.component(.year, from: Date())
+                navMonth = Calendar.current.component(.month, from: Date()) - 1
             }
         }
     }

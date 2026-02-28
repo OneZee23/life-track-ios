@@ -142,6 +142,19 @@ class AppStore: ObservableObject {
         return cur
     }
 
+    func habitStreak(habitId: String, asOf date: Date) -> Int {
+        let cal = Calendar.current
+        var streak = 0
+        var d = date
+        while true {
+            let ds = formatDate(d)
+            guard let v = checkins[ds]?[habitId], v == 1 else { break }
+            streak += 1
+            d = cal.date(byAdding: .day, value: -1, to: d)!
+        }
+        return streak
+    }
+
     // MARK: - Habits
 
     func addHabit(name: String, emoji: String) {
