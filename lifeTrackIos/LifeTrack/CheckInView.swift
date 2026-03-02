@@ -338,6 +338,7 @@ private struct ExtendedCheckinPanel: View {
     @State private var isEditingValue = false
     @State private var editValueText = ""
     @FocusState private var editValueFocused: Bool
+    @State private var localText: String = ""
 
     var body: some View {
         Group {
@@ -539,19 +540,29 @@ private struct ExtendedCheckinPanel: View {
 
     private var textPanel: some View {
         HStack(spacing: 8) {
-            TextField(L10n.extendedNotePlaceholder, text: Binding(
-                get: { value?.textValue ?? "" },
-                set: { newText in
-                    let limited = String(newText.prefix(140))
+            TextField(L10n.extendedNotePlaceholder, text: $localText)
+                .font(.system(size: 15))
+                .foregroundColor(.primary)
+                .onAppear {
+                    localText = value?.textValue ?? ""
+                }
+                .onChange(of: localText) { newValue in
+                    if newValue.count > 140 {
+                        localText = String(newValue.prefix(140))
+                        return
+                    }
                     var extra = value ?? CheckinExtra()
-                    extra.textValue = limited.isEmpty ? nil : limited
+                    extra.textValue = newValue.isEmpty ? nil : newValue
                     onChange(extra)
                 }
-            ))
-            .font(.system(size: 15))
-            .foregroundColor(.primary)
+                .onChange(of: value?.textValue) { newStoreValue in
+                    let text = newStoreValue ?? ""
+                    if localText != text {
+                        localText = text
+                    }
+                }
 
-            Text("\((value?.textValue ?? "").count)/140")
+            Text("\(localText.count)/140")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
         }

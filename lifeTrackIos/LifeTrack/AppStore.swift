@@ -142,13 +142,6 @@ class AppStore: ObservableObject {
             }
         }
         checkins[date] = dayData
-        // Clear extra data when unchecking
-        if wasChecked {
-            checkinExtras[date]?.removeValue(forKey: habitId)
-            if checkinExtras[date]?.isEmpty == true {
-                checkinExtras.removeValue(forKey: date)
-            }
-        }
         save()
     }
 

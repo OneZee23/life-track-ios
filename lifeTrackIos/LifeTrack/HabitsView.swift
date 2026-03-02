@@ -877,12 +877,14 @@ struct HabitFormView: View {
 
     private var previewTextPanel: some View {
         HStack(spacing: 8) {
-            TextField(L10n.extendedNotePlaceholder, text: Binding(
-                get: { previewText },
-                set: { previewText = String($0.prefix(140)) }
-            ))
-            .font(.system(size: 15))
-            .foregroundColor(.primary)
+            TextField(L10n.extendedNotePlaceholder, text: $previewText)
+                .font(.system(size: 15))
+                .foregroundColor(.primary)
+                .onChange(of: previewText) { newValue in
+                    if newValue.count > 140 {
+                        previewText = String(newValue.prefix(140))
+                    }
+                }
 
             Text("\(previewText.count)/140")
                 .font(.system(size: 11))
