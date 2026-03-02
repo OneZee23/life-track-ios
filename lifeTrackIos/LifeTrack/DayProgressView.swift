@@ -10,7 +10,7 @@ struct DayProgressView: View {
     private var today: Bool { isToday(date) }
 
     private var visibleHabits: [Habit] {
-        store.activeHabits
+        store.habitsExisted(from: date, to: date)
     }
 
     private var doneCount: Int {
@@ -28,7 +28,7 @@ struct DayProgressView: View {
             // Day header with navigation
             VStack(spacing: 4) {
                 HStack {
-                    navArrow(left: true) {
+                    NavArrowButton(left: true) {
                         let prev = Calendar.current.date(byAdding: .day, value: -1, to: date)!
                         onDayChange(prev)
                     }
@@ -37,7 +37,7 @@ struct DayProgressView: View {
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.primary)
                     Spacer()
-                    navArrow(left: false) {
+                    NavArrowButton(left: false) {
                         let next = Calendar.current.date(byAdding: .day, value: 1, to: date)!
                         onDayChange(next)
                     }
@@ -119,24 +119,6 @@ struct DayProgressView: View {
                     )
             }
 
-        }
-    }
-
-    // MARK: - Nav arrow
-
-    func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.systemGray5))
-                    .frame(width: 32, height: 32)
-                Image(systemName: left ? "chevron.left" : "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
         }
     }
 

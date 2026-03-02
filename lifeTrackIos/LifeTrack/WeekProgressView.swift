@@ -46,7 +46,7 @@ struct WeekProgressView: View {
         VStack(spacing: 12) {
             // Nav header
             HStack {
-                navArrow(left: true) {
+                NavArrowButton(left: true) {
                     let prev = Calendar.current.date(byAdding: .day, value: -7, to: weekStartDate)!
                     onWeekChange(prev)
                 }
@@ -59,7 +59,7 @@ struct WeekProgressView: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                navArrow(left: false) {
+                NavArrowButton(left: false) {
                     let next = Calendar.current.date(byAdding: .day, value: 7, to: weekStartDate)!
                     onWeekChange(next)
                 }
@@ -69,9 +69,9 @@ struct WeekProgressView: View {
             dayStrip
 
             if isFutureWeek {
-                weekPlaceholder(emoji: "🔮", title: L10n.futureTitle, subtitle: L10n.futureSubtitle)
+                PlaceholderView(emoji: "🔮", title: L10n.futureTitle, subtitle: L10n.futureSubtitle)
             } else if hasNoData {
-                weekPlaceholder(emoji: "😴", title: L10n.emptyTitle, subtitle: L10n.emptySubtitle)
+                PlaceholderView(emoji: "😴", title: L10n.emptyTitle, subtitle: L10n.emptySubtitle)
             } else {
                 // Per-habit bars
                 habitBars
@@ -259,38 +259,4 @@ struct WeekProgressView: View {
         )
     }
 
-    func weekPlaceholder(emoji: String, title: String, subtitle: String) -> some View {
-        VStack(spacing: 12) {
-            Text(emoji)
-                .font(.system(size: 48))
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.primary)
-            Text(subtitle)
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 48)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
-    }
-
-    func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.systemGray5))
-                    .frame(width: 32, height: 32)
-                Image(systemName: left ? "chevron.left" : "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
-        }
-    }
 }

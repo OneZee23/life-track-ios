@@ -6,8 +6,6 @@ struct HabitToggleCard: View {
     let streak: Int
     let onToggle: () -> Void
 
-    @State private var isPressed = false
-
     var body: some View {
         Button(action: {
             let impact = UIImpactFeedbackGenerator(style: .light)

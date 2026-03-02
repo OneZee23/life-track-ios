@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.2.4 | **Started:** Feb 2026
+**Status:** v0.2.5 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---
@@ -118,10 +118,11 @@ life-track-ios/
 │   ├── LifeTrack/
 │   │   ├── LifeTrackApp.swift          # @main entry point
 │   │   ├── ContentView.swift           # TabView (3 tabs)
-│   │   ├── Models.swift                # Habit, DayStatus
+│   │   ├── Models.swift                # Habit, DayStatus, HabitStat, MonthlyStat
 │   │   ├── AppStore.swift              # ObservableObject, UserDefaults persistence
 │   │   ├── DateUtils.swift             # Date helpers
 │   │   ├── L10n.swift                  # Localization (ru/en, runtime switching)
+│   │   ├── SharedComponents.swift      # Shared UI (NavArrowButton, PlaceholderView, StreakCardView)
 │   │   │
 │   │   ├── CheckInView.swift           # Daily check-in (today/yesterday)
 │   │   ├── HabitToggleCard.swift       # Tap card with spring animation

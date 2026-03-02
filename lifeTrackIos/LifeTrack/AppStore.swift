@@ -347,6 +347,46 @@ class AppStore: ObservableObject {
         }.sorted { $0.sortOrder < $1.sortOrder }
     }
 
+    // MARK: - Analytics
+
+    /// Compute per-habit stats for a given year, optionally scoped to a single month (0-indexed).
+    func computeHabitStats(year: Int, month: Int? = nil) -> [HabitStat] {
+        let monthRange: Range<Int> = month.map { $0..<($0 + 1) } ?? 0..<12
+
+        var habitTracked: [String: Int] = [:]
+        var habitDone: [String: Int] = [:]
+
+        for m in monthRange {
+            let days = daysInMonth(year: year, month: m)
+            for day in 1...days {
+                guard let d = makeDate(year: year, month: m, day: day) else { continue }
+                if isFuture(d) && !isToday(d) { continue }
+                let ids = trackedHabitIds(on: d)
+                guard !ids.isEmpty else { continue }
+                let ds = formatDate(d)
+                let dayData = checkins[ds] ?? [:]
+                for id in ids {
+                    habitTracked[id, default: 0] += 1
+                    if dayData[id] == 1 { habitDone[id, default: 0] += 1 }
+                }
+            }
+        }
+
+        var results: [HabitStat] = []
+        for (habitId, tracked) in habitTracked {
+            guard tracked > 0 else { continue }
+            guard let habit = habits.first(where: { $0.id == habitId }) else { continue }
+            let done = habitDone[habitId] ?? 0
+            let rate = Double(done) / Double(tracked) * 100.0
+            results.append(HabitStat(habit: habit, done: done, tracked: tracked, rate: rate))
+        }
+
+        return results.sorted {
+            if $0.rate != $1.rate { return $0.rate > $1.rate }
+            return $0.habit.sortOrder < $1.habit.sortOrder
+        }
+    }
+
     // MARK: - Habits
 
     func addHabit(name: String, emoji: String) {
@@ -458,26 +498,21 @@ class AppStore: ObservableObject {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
 
-        let cal = Calendar.current
-        for dayOffset in 0..<7 {
-            let content = UNMutableNotificationContent()
-            content.title = "LifeTrack"
-            content.body = L10n.randomReminder()
-            content.sound = .default
+        let content = UNMutableNotificationContent()
+        content.title = "LifeTrack"
+        content.body = L10n.randomReminder()
+        content.sound = .default
 
-            guard let targetDate = cal.date(byAdding: .day, value: dayOffset, to: Date()) else { continue }
-            var dateComponents = cal.dateComponents([.year, .month, .day], from: targetDate)
-            dateComponents.hour = notifHour
-            dateComponents.minute = notifMinute
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
-            let request = UNNotificationRequest(
-                identifier: "lt_daily_\(dayOffset)",
-                content: content,
-                trigger: trigger
-            )
-            center.add(request, withCompletionHandler: nil)
-        }
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: DateComponents(hour: notifHour, minute: notifMinute),
+            repeats: true
+        )
+        let request = UNNotificationRequest(
+            identifier: "lt_daily",
+            content: content,
+            trigger: trigger
+        )
+        center.add(request, withCompletionHandler: nil)
     }
 
     // MARK: - Persistence

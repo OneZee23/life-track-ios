@@ -136,7 +136,7 @@ struct CheckInView: View {
 
             // Habit cards
             VStack(spacing: 8) {
-                ForEach(Array(store.activeHabits.enumerated()), id: \.element.id) { index, habit in
+                ForEach(store.activeHabits) { habit in
                     HabitToggleCard(
                         habit: habit,
                         isDone: isDone(habit.id),

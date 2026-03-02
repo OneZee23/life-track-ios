@@ -15,14 +15,14 @@ struct MonthProgressView: View {
         VStack(spacing: 12) {
             // Nav header
             HStack {
-                navArrow(left: true) { onMonthChange(month - 1) }
+                NavArrowButton(left: true) { onMonthChange(month - 1) }
                 Spacer()
                 VStack(spacing: 2) {
                     Text(verbatim: "\(L10n.monthsFull[month]) \(String(year))")
                         .font(.system(size: 17, weight: .bold))
                 }
                 Spacer()
-                navArrow(left: false) { onMonthChange(month + 1) }
+                NavArrowButton(left: false) { onMonthChange(month + 1) }
             }
 
             // Calendar grid
@@ -118,34 +118,9 @@ struct MonthProgressView: View {
         let best = store.bestStreakAllTime()
         let cur = store.currentStreak()
         return HStack(spacing: 8) {
-            streakCard(label: L10n.bestStreak, value: best)
-            streakCard(label: L10n.currentStreak, value: cur)
+            StreakCardView(label: L10n.bestStreak, value: best)
+            StreakCardView(label: L10n.currentStreak, value: cur)
         }
-    }
-
-    func streakCard(label: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            HStack(alignment: .bottom, spacing: 4) {
-                Text("\(value)")
-                    .font(.system(size: 28, weight: .black, design: .rounded))
-                    .foregroundColor(Color(UIColor.systemGreen))
-                Text(L10n.pluralDays(value))
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 4)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
     }
 
     // MARK: - Analytics button
@@ -169,24 +144,6 @@ struct MonthProgressView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color(UIColor.systemGreen).opacity(0.1))
             )
-        }
-    }
-
-    // MARK: - Nav
-
-    func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.systemGray5))
-                    .frame(width: 32, height: 32)
-                Image(systemName: left ? "chevron.left" : "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
         }
     }
 

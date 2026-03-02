@@ -5,6 +5,27 @@
 
 ---
 
+## [0.2.5] — 2 марта 2026
+
+### Added
+- **SharedComponents.swift** — общие UI-компоненты: `NavArrowButton`, `PlaceholderView`, `StreakCardView`, `barColor`
+- **computeHabitStats** в AppStore — единый метод расчёта статистики по привычкам (year/month)
+
+### Fixed
+- **DayProgressView** — показывает привычки, существовавшие на выбранную дату, а не только текущие
+- **scheduleDaily()** — одно повторяющееся уведомление вместо 7 одноразовых
+- **YearProgressView** — `computeYearTotals()` вызывался дважды за рендер, теперь кэшируется
+
+### Changed
+- `HabitStat` и `MonthlyStat` вынесены в Models.swift (были продублированы в 2 файлах)
+- `navArrow` удалён из 6 файлов → заменён на `NavArrowButton`
+- `placeholder` удалён из 3 файлов → заменён на `PlaceholderView`
+- `streakCard` удалён из 2 файлов → заменён на `StreakCardView`
+- `barColor` удалён из 2 файлов → вынесен в SharedComponents
+- Удалён мёртвый код: `isPressed` в HabitToggleCard, лишний `enumerated()` в CheckInView
+
+---
+
 ## [0.2.4] — 2 марта 2026
 
 ### Added

@@ -89,7 +89,12 @@ v0.2.4 (Analytics & Safety) — DONE
   Подтверждение удаления ✓
   Стабильная сортировка ✓
 
-v0.2.5 (Onboarding & Coaching)
+v0.2.5 (Refactoring & Cleanup)
+  Дедупликация компонентов (NavArrowButton, PlaceholderView, StreakCardView, barColor)
+  Баг DayProgressView (исторические привычки)
+  Performance fixes (computeYearTotals, scheduleDaily)
+
+v0.2.6 (Onboarding & Coaching)
   п.11 — Онбординг
   п.38 — Compassionate Coach
 

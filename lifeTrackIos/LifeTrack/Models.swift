@@ -43,3 +43,19 @@ enum DayStatus: Int, Equatable, Comparable {
         self >= .medium
     }
 }
+
+// MARK: - Analytics Stats
+
+struct HabitStat {
+    let habit: Habit
+    let done: Int
+    let tracked: Int
+    let rate: Double
+}
+
+struct MonthlyStat {
+    let month: Int
+    let done: Int
+    let tracked: Int
+    let rate: Double
+}

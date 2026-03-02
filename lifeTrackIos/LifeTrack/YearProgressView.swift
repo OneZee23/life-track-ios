@@ -29,12 +29,12 @@ struct YearProgressView: View {
 
     var navHeader: some View {
         HStack {
-            navArrow(left: true) { onYearChange(year - 1) }
+            NavArrowButton(left: true) { onYearChange(year - 1) }
             Spacer()
             Text(verbatim: String(year))
                 .font(.system(size: 17, weight: .bold))
             Spacer()
-            navArrow(left: false) { onYearChange(year + 1) }
+            NavArrowButton(left: false) { onYearChange(year + 1) }
         }
         .padding(.bottom, 2)
     }
@@ -43,6 +43,7 @@ struct YearProgressView: View {
 
     var yearSummary: some View {
         let totalDaysInYear = isLeapYear(year) ? 366 : 365
+        let totals = computeYearTotals()
 
         return HStack(spacing: 8) {
             if year == currentYear {
@@ -55,8 +56,7 @@ struct YearProgressView: View {
                     color: .primary
                 )
             } else if year < currentYear {
-                let (_, _, tracked) = computeYearTotals()
-                let missed = totalDaysInYear - tracked
+                let missed = totalDaysInYear - totals.tracked
                 firstCard(
                     label: L10n.missed,
                     valueText: "\(missed)",
@@ -74,9 +74,8 @@ struct YearProgressView: View {
                 )
             }
 
-            let (doneDays, perfectDays, _) = computeYearTotals()
-            summaryCard(label: L10n.completed, hint: L10n.hintCompleted, value: doneDays, color: Color(UIColor.systemGreen))
-            summaryCard(label: L10n.perfect, hint: L10n.hintPerfect, value: perfectDays, color: Color(UIColor.systemGreen))
+            summaryCard(label: L10n.completed, hint: L10n.hintCompleted, value: totals.done, color: Color(UIColor.systemGreen))
+            summaryCard(label: L10n.perfect, hint: L10n.hintPerfect, value: totals.perfect, color: Color(UIColor.systemGreen))
         }
     }
 
@@ -321,24 +320,6 @@ struct YearProgressView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color(UIColor.systemGreen).opacity(0.1))
             )
-        }
-    }
-
-    // MARK: - Helpers
-
-    func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.systemGray5))
-                    .frame(width: 32, height: 32)
-                Image(systemName: left ? "chevron.left" : "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
         }
     }
 

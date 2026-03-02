@@ -19,9 +19,9 @@ struct YearAnalyticsView: View {
         VStack(spacing: 16) {
             navHeader
             if isFutureYear {
-                placeholder(emoji: "🔮", title: L10n.futureTitle, subtitle: L10n.futureSubtitle)
+                PlaceholderView(emoji: "🔮", title: L10n.futureTitle, subtitle: L10n.futureSubtitle)
             } else if hasNoData {
-                placeholder(emoji: "😴", title: L10n.emptyTitle, subtitle: L10n.emptySubtitle)
+                PlaceholderView(emoji: "😴", title: L10n.emptyTitle, subtitle: L10n.emptySubtitle)
             } else {
                 completionRateCard
                 streakCards
@@ -32,35 +32,16 @@ struct YearAnalyticsView: View {
         }
     }
 
-    func placeholder(emoji: String, title: String, subtitle: String) -> some View {
-        VStack(spacing: 12) {
-            Text(emoji)
-                .font(.system(size: 48))
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.primary)
-            Text(subtitle)
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 48)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
-    }
-
     // MARK: - Nav header
 
     var navHeader: some View {
         HStack {
-            navArrow(left: true) { onYearChange(year - 1) }
+            NavArrowButton(left: true) { onYearChange(year - 1) }
             Spacer()
             Text(verbatim: String(year))
                 .font(.system(size: 17, weight: .bold))
             Spacer()
-            navArrow(left: false) { onYearChange(year + 1) }
+            NavArrowButton(left: false) { onYearChange(year + 1) }
         }
         .padding(.bottom, 2)
     }
@@ -113,34 +94,9 @@ struct YearAnalyticsView: View {
         let best = computeYearBestStreak()
         let current = computeCurrentStreak()
         return HStack(spacing: 8) {
-            streakCard(label: L10n.bestStreak, value: best)
-            streakCard(label: L10n.currentStreak, value: current)
+            StreakCardView(label: L10n.bestStreak, value: best)
+            StreakCardView(label: L10n.currentStreak, value: current)
         }
-    }
-
-    func streakCard(label: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            HStack(alignment: .bottom, spacing: 4) {
-                Text("\(value)")
-                    .font(.system(size: 28, weight: .black, design: .rounded))
-                    .foregroundColor(Color(UIColor.systemGreen))
-                Text(L10n.pluralDays(value))
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 4)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
     }
 
     // MARK: - Habit ranking
@@ -203,13 +159,6 @@ struct YearAnalyticsView: View {
                 }
             }
         }
-    }
-
-    func barColor(rate: Double) -> Color {
-        if rate >= 75 { return Color(UIColor.systemGreen) }
-        if rate >= 50 { return Color(UIColor.systemGreen).opacity(0.75) }
-        if rate >= 25 { return Color(UIColor.systemGreen).opacity(0.50) }
-        return Color(UIColor.systemGreen).opacity(0.25)
     }
 
     // MARK: - Monthly breakdown
@@ -464,39 +413,7 @@ struct YearAnalyticsView: View {
         return YearGrid(columns: columns, monthLabels: monthLabels)
     }
 
-    // MARK: - Nav arrow
-
-    func navArrow(left: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.systemGray5))
-                    .frame(width: 32, height: 32)
-                Image(systemName: left ? "chevron.left" : "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
-        }
-    }
-
     // MARK: - Data computation
-
-    struct HabitStat {
-        let habit: Habit
-        let done: Int
-        let tracked: Int
-        let rate: Double
-    }
-
-    struct MonthlyStat {
-        let month: Int
-        let done: Int
-        let tracked: Int
-        let rate: Double
-    }
 
     func computeCompletionRate() -> (done: Int, tracked: Int, rate: Double) {
         var totalDone = 0, totalTracked = 0
@@ -570,37 +487,7 @@ struct YearAnalyticsView: View {
     }
 
     func computeHabitStats() -> [HabitStat] {
-        var habitTracked: [String: Int] = [:]
-        var habitDone: [String: Int] = [:]
-        for month in 0..<12 {
-            let days = daysInMonth(year: year, month: month)
-            for day in 1...days {
-                guard let d = makeDate(year: year, month: month, day: day) else { continue }
-                if isFuture(d) && !isToday(d) { continue }
-                let ids = store.trackedHabitIds(on: d)
-                guard !ids.isEmpty else { continue }
-                let ds = formatDate(d)
-                let dayData = store.checkins[ds] ?? [:]
-                for id in ids {
-                    habitTracked[id, default: 0] += 1
-                    if dayData[id] == 1 { habitDone[id, default: 0] += 1 }
-                }
-            }
-        }
-
-        var results: [HabitStat] = []
-        for (habitId, tracked) in habitTracked {
-            guard tracked > 0 else { continue }
-            guard let habit = store.habits.first(where: { $0.id == habitId }) else { continue }
-            let done = habitDone[habitId] ?? 0
-            let rate = Double(done) / Double(tracked) * 100.0
-            results.append(HabitStat(habit: habit, done: done, tracked: tracked, rate: rate))
-        }
-
-        return results.sorted {
-            if $0.rate != $1.rate { return $0.rate > $1.rate }
-            return $0.habit.sortOrder < $1.habit.sortOrder
-        }
+        store.computeHabitStats(year: year)
     }
 
     func computeMonthlyStats() -> [MonthlyStat] {
