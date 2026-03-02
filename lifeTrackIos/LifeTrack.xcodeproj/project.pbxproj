@@ -28,6 +28,7 @@
 		AA00000000000000000000D8 /* MonthAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D7 /* MonthAnalyticsView.swift */; };
 		AA00000000000000000000DA /* DailyGreetingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D9 /* DailyGreetingView.swift */; };
 		AA00000000000000000000DC /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DB /* SharedComponents.swift */; };
+		AA00000000000000000000DE /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DD /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +55,7 @@
 		AA00000000000000000000D7 /* MonthAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthAnalyticsView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000D9 /* DailyGreetingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyGreetingView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000DB /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
+		AA00000000000000000000DD /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +108,7 @@
 				AA00000000000000000000D7 /* MonthAnalyticsView.swift */,
 				AA00000000000000000000D9 /* DailyGreetingView.swift */,
 				AA00000000000000000000DB /* SharedComponents.swift */,
+				AA00000000000000000000DD /* OnboardingView.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -209,6 +212,7 @@
 				AA00000000000000000000D8 /* MonthAnalyticsView.swift in Sources */,
 				AA00000000000000000000DA /* DailyGreetingView.swift in Sources */,
 				AA00000000000000000000DC /* SharedComponents.swift in Sources */,
+				AA00000000000000000000DE /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,7 +341,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -349,7 +353,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.5;
+				MARKETING_VERSION = 0.2.6;
 				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -364,7 +368,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -376,7 +380,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.5;
+				MARKETING_VERSION = 0.2.6;
 				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

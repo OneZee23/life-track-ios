@@ -80,6 +80,28 @@ struct SettingsView: View {
                     Text(L10n.reminderFooter)
                 }
 
+                // Onboarding
+                Section {
+                    Button {
+                        store.resetOnboarding()
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(UIColor.systemGreen))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "hand.wave.fill")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.white)
+                            }
+                            Text(L10n.onboardingShowAgain)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+
                 // About
                 Section {
                     VStack(alignment: .leading, spacing: 8) {

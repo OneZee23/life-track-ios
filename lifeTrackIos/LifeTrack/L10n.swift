@@ -309,4 +309,68 @@ enum L10n {
         : [("🛌", "Sleep"), ("🚴", "Activity"), ("🥗", "Nutrition"),
            ("🧠", "Mental"), ("💻", "Projects")]
     }
+
+    // MARK: - Onboarding
+
+    static var onboardingTagline: String {
+        isRu ? "Сделал или нет?" : "Did you do it or not?"
+    }
+
+    static var onboardingWhyWord1: String {
+        isRu ? "Отмечай" : "Track"
+    }
+
+    static var onboardingWhyWord2: String {
+        isRu ? "Замечай" : "Notice"
+    }
+
+    static var onboardingWhyWord3: String {
+        isRu ? "Расти" : "Grow"
+    }
+
+    static var onboardingPage2Title: String {
+        isRu ? "Отмечай за 5 секунд" : "Check in within 5 seconds"
+    }
+
+    static var onboardingPage2Subtitle: String {
+        isRu ? "Тап — и привычка записана" : "One tap — and the habit is logged"
+    }
+
+    static var onboardingPage3Title: String {
+        isRu ? "Смотри свой прогресс" : "See your progress grow"
+    }
+
+    static var onboardingPage3Subtitle: String {
+        isRu ? "Каждый день оставляет след" : "Every day leaves a mark"
+    }
+
+    static var onboardingLetsGo: String {
+        isRu ? "Начнём!" : "Let's go!"
+    }
+
+    static var onboardingShowAgain: String {
+        isRu ? "Показать онбординг" : "Show onboarding"
+    }
+
+    // MARK: - Compassionate Coach
+
+    static var coachMissed1: String {
+        isRu ? "У всех бывает. Прогресс не потерян." : "Everyone has off days. Your progress is still here."
+    }
+
+    static var coachMissed2: String {
+        isRu ? "Ты здесь — это уже шаг." : "You're here — that's already a step."
+    }
+
+    static var coachMissed4: String {
+        isRu ? "Маленький шаг лучше стоять на месте." : "A small step beats standing still."
+    }
+
+    static var coachMissed7: String {
+        isRu ? "Каждый момент — шанс начать заново." : "Every moment is a chance to start fresh."
+    }
+
+    static func coachHabitNudge(_ name: String) -> String {
+        isRu ? "Привычка «\(name)» ждёт тебя" : "«\(name)» is waiting for you"
+    }
 }

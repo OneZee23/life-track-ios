@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var selectedTab = 1
     @State private var progressResetID = UUID()
     @State private var showGreeting = false
+    @State private var showOnboarding = false
 
     private var tabSelection: Binding<Int> {
         Binding(
@@ -50,11 +51,39 @@ struct ContentView: View {
                     }
                 }
             }
+
+            if showOnboarding {
+                OnboardingView {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                        showOnboarding = false
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        checkGreeting()
+                    }
+                }
+            }
         }
-        .onAppear { checkGreeting() }
+        .onAppear { checkOnboardingThenGreeting() }
         .onChange(of: scenePhase) { phase in
-            if phase == .active { checkGreeting() }
+            if phase == .active { checkOnboardingThenGreeting() }
         }
+        .onChange(of: store.onboardingCompleted) { completed in
+            if !completed {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                    showOnboarding = true
+                }
+            }
+        }
+    }
+
+    private func checkOnboardingThenGreeting() {
+        if !store.onboardingCompleted {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                showOnboarding = true
+            }
+            return
+        }
+        checkGreeting()
     }
 
     private func checkGreeting() {

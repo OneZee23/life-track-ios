@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.2.5 | **Started:** Feb 2026
+**Status:** v0.2.6 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---
@@ -127,7 +127,8 @@ life-track-ios/
 │   │   ├── CheckInView.swift           # Daily check-in (today/yesterday)
 │   │   ├── HabitToggleCard.swift       # Tap card with spring animation
 │   │   ├── ConfettiView.swift          # Celebration confetti overlay
-│   │   ├── DailyGreetingView.swift     # Daily greeting with yesterday stats
+│   │   ├── DailyGreetingView.swift     # Daily greeting + compassionate coach
+│   │   ├── OnboardingView.swift       # First-launch onboarding (4 animated pages)
 │   │   │
 │   │   ├── ProgressRootView.swift      # Progress container + navigation
 │   │   ├── YearProgressView.swift      # Year heatmap + summary cards
@@ -239,6 +240,9 @@ APP_STORE_ISSUER_ID=<your-issuer-id>
 - [x] Daily greeting with yesterday's stats
 - [x] Undo/Redo (last 5 changes), delete confirmation
 - [x] Date-aware analytics algorithm (tracks habits that existed on each date)
+- [x] Shared UI components (NavArrowButton, PlaceholderView, StreakCardView)
+- [x] Onboarding — 4-page animated intro on first launch (SwiftUI native)
+- [x] Compassionate Coach — warm messages on missed days in daily greeting
 
 ### v0.3.0 (planned)
 
@@ -246,8 +250,6 @@ APP_STORE_ISSUER_ID=<your-issuer-id>
 
 ### Future (ideas)
 
-- [ ] Onboarding (2-3 screens with app preview)
-- [ ] Compassionate Coach (soft messages on missed days)
 - [ ] iOS widget (today's streak)
 - [ ] Export data (CSV/JSON)
 - [ ] Online sync (server + local offline data merge)

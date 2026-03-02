@@ -12,6 +12,7 @@ class AppStore: ObservableObject {
     @Published var notifEnabled: Bool = false
     @Published var notifHour: Int = 21
     @Published var notifMinute: Int = 0
+    @Published var onboardingCompleted: Bool = false
 
     private let habitsKey = "lt_habits_v1"
     private let checkinsKey = "lt_checkins_v1"
@@ -22,6 +23,7 @@ class AppStore: ObservableObject {
     private let notifHourKey    = "lt_notif_hour"
     private let notifMinuteKey  = "lt_notif_minute"
     private let greetingDateKey = "lt_greeting_shown_date"
+    private let onboardingKey = "lt_onboarding_completed"
 
     // MARK: - Undo/Redo
 
@@ -278,6 +280,92 @@ class AppStore: ObservableObject {
         let dayData = checkins[ds] ?? [:]
         let done = ids.filter { dayData[$0] == 1 }.count
         return (done, ids.count)
+    }
+
+    // MARK: - Onboarding
+
+    func completeOnboarding() {
+        onboardingCompleted = true
+        UserDefaults.standard.set(true, forKey: onboardingKey)
+    }
+
+    func resetOnboarding() {
+        onboardingCompleted = false
+        UserDefaults.standard.set(false, forKey: onboardingKey)
+    }
+
+    // MARK: - Compassionate Coach
+
+    func missedDaysCount() -> Int {
+        let cal = Calendar.current
+        var count = 0
+        var date = yesterday()
+
+        for _ in 0..<365 {
+            let ds = formatDate(date)
+            let status = dayStatus(date: ds)
+
+            if let s = status, s != .none { break }
+
+            let trackedIds = trackedHabitIds(on: date)
+            if trackedIds.isEmpty { break }
+
+            count += 1
+            guard let prev = cal.date(byAdding: .day, value: -1, to: date) else { break }
+            date = prev
+        }
+
+        return count
+    }
+
+    func longestMissedHabit() -> Habit? {
+        let cal = Calendar.current
+        var worst: (habit: Habit, count: Int)? = nil
+
+        for habit in activeHabits {
+            var count = 0
+            var date = yesterday()
+
+            for _ in 0..<365 {
+                guard habitWasActive(habit, on: date) else { break }
+
+                let ds = formatDate(date)
+                if let v = checkins[ds]?[habit.id], v == 1 { break }
+
+                let trackedIds = trackedHabitIds(on: date)
+                if trackedIds.isEmpty { break }
+
+                count += 1
+                guard let prev = cal.date(byAdding: .day, value: -1, to: date) else { break }
+                date = prev
+            }
+
+            if count >= 3 {
+                if worst == nil || count > worst!.count {
+                    worst = (habit, count)
+                }
+            }
+        }
+
+        return worst?.habit
+    }
+
+    func coachMessage() -> String? {
+        let missed = missedDaysCount()
+        if missed == 0 { return nil }
+        if missed == 1 { return L10n.coachMissed1 }
+        if missed <= 3 { return L10n.coachMissed2 }
+        if missed <= 7 { return L10n.coachMissed4 }
+        return L10n.coachMissed7
+    }
+
+    func coachEmoji() -> String {
+        let missed = missedDaysCount()
+        if missed == 0 { return "" }
+        if missed == 1 { return "💛" }
+        if missed <= 3 { return "🌱" }
+        if missed <= 7 { return "🌤️" }
+        return "✨"
     }
 
     /// Returns habit IDs that should be counted on a given date.
@@ -557,6 +645,7 @@ class AppStore: ObservableObject {
         if UserDefaults.standard.object(forKey: notifMinuteKey) != nil {
             notifMinute = UserDefaults.standard.integer(forKey: notifMinuteKey)
         }
+        onboardingCompleted = UserDefaults.standard.bool(forKey: onboardingKey)
     }
 
     private func seedDefaults() {
