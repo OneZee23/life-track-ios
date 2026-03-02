@@ -36,6 +36,50 @@ struct SettingsView: View {
                     Text(L10n.language)
                 }
 
+                // Reminders
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { store.notifEnabled },
+                        set: { store.setNotifEnabled($0) }
+                    )) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(UIColor.systemOrange))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "bell.fill")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.white)
+                            }
+                            Text(L10n.reminderToggle)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                    .tint(Color(UIColor.systemGreen))
+
+                    if store.notifEnabled {
+                        DatePicker(
+                            L10n.reminderTime,
+                            selection: Binding(
+                                get: {
+                                    Calendar.current.date(from: DateComponents(hour: store.notifHour, minute: store.notifMinute)) ?? Date()
+                                },
+                                set: { newDate in
+                                    let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                                    store.setNotifTime(hour: comps.hour ?? 21, minute: comps.minute ?? 0)
+                                }
+                            ),
+                            displayedComponents: .hourAndMinute
+                        )
+                        .font(.system(size: 15, weight: .medium))
+                    }
+                } header: {
+                    Text(L10n.reminders)
+                } footer: {
+                    Text(L10n.reminderFooter)
+                }
+
                 // About
                 Section {
                     VStack(alignment: .leading, spacing: 8) {

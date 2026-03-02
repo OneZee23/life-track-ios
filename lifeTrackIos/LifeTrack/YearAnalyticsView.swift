@@ -8,19 +8,47 @@ struct YearAnalyticsView: View {
     let onMonthTap: (Int) -> Void
 
     private var currentYear: Int { Calendar.current.component(.year, from: Date()) }
+    private var isFutureYear: Bool { year > currentYear }
 
     private let miniCellSize: CGFloat = 10
     private let miniCellSpacing: CGFloat = 2
 
+    private var hasNoData: Bool { computeCompletionRate().tracked == 0 }
+
     var body: some View {
         VStack(spacing: 16) {
             navHeader
-            completionRateCard
-            streakCards
-            habitRankingCard
-            habitHeatmapsSection
-            monthlyBreakdownCard
+            if isFutureYear {
+                placeholder(emoji: "🔮", title: L10n.futureTitle, subtitle: L10n.futureSubtitle)
+            } else if hasNoData {
+                placeholder(emoji: "😴", title: L10n.emptyTitle, subtitle: L10n.emptySubtitle)
+            } else {
+                completionRateCard
+                streakCards
+                habitRankingCard
+                habitHeatmapsSection
+                monthlyBreakdownCard
+            }
         }
+    }
+
+    func placeholder(emoji: String, title: String, subtitle: String) -> some View {
+        VStack(spacing: 12) {
+            Text(emoji)
+                .font(.system(size: 48))
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.primary)
+            Text(subtitle)
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
     }
 
     // MARK: - Nav header
@@ -84,7 +112,6 @@ struct YearAnalyticsView: View {
     var streakCards: some View {
         let best = computeYearBestStreak()
         let current = computeCurrentStreak()
-
         return HStack(spacing: 8) {
             streakCard(label: L10n.bestStreak, value: best)
             streakCard(label: L10n.currentStreak, value: current)
@@ -247,7 +274,6 @@ struct YearAnalyticsView: View {
     // MARK: - Per-habit heatmaps
 
     var habitHeatmapsSection: some View {
-        let habits = store.activeHabits
         let stats = computeHabitStats()
 
         return VStack(spacing: 12) {
@@ -259,9 +285,8 @@ struct YearAnalyticsView: View {
                 Spacer()
             }
 
-            ForEach(habits, id: \.id) { habit in
-                let stat = stats.first { $0.habit.id == habit.id }
-                habitHeatmapCard(habit: habit, stat: stat)
+            ForEach(Array(stats.enumerated()), id: \.offset) { _, stat in
+                habitHeatmapCard(habit: stat.habit, stat: stat)
             }
         }
     }
@@ -474,23 +499,19 @@ struct YearAnalyticsView: View {
     }
 
     func computeCompletionRate() -> (done: Int, tracked: Int, rate: Double) {
-        let habits = store.activeHabits
-        guard !habits.isEmpty else { return (0, 0, 0) }
-
         var totalDone = 0, totalTracked = 0
         for month in 0..<12 {
             let days = daysInMonth(year: year, month: month)
             for day in 1...days {
                 guard let d = makeDate(year: year, month: month, day: day) else { continue }
                 if isFuture(d) && !isToday(d) { continue }
+                let ids = store.trackedHabitIds(on: d)
+                guard !ids.isEmpty else { continue }
                 let ds = formatDate(d)
-                for habit in habits {
-                    if store.checkins[ds]?[habit.id] != nil {
-                        totalTracked += 1
-                        if store.checkinValue(habitId: habit.id, date: ds) == 1 {
-                            totalDone += 1
-                        }
-                    }
+                let dayData = store.checkins[ds] ?? [:]
+                totalTracked += ids.count
+                for id in ids {
+                    if dayData[id] == 1 { totalDone += 1 }
                 }
             }
         }
@@ -534,44 +555,55 @@ struct YearAnalyticsView: View {
         var streak = 0
         while true {
             let y = cal.component(.year, from: date)
-            if y != year { break }  // only count within the viewed year
+            if y != year { break }
             let ds = formatDate(date)
-            guard let status = store.dayStatus(date: ds), status != .none else { break }
-            streak += 1
+            let status = store.dayStatus(date: ds)
+
+            if let s = status, s != .none {
+                streak += 1
+            } else {
+                break
+            }
             date = cal.date(byAdding: .day, value: -1, to: date)!
         }
         return streak
     }
 
     func computeHabitStats() -> [HabitStat] {
-        let habits = store.activeHabits
-        var results: [HabitStat] = []
-
-        for habit in habits {
-            var done = 0, tracked = 0
-            for month in 0..<12 {
-                let days = daysInMonth(year: year, month: month)
-                for day in 1...days {
-                    guard let d = makeDate(year: year, month: month, day: day) else { continue }
-                    if isFuture(d) && !isToday(d) { continue }
-                    let ds = formatDate(d)
-                    if store.checkins[ds]?[habit.id] != nil {
-                        tracked += 1
-                        if store.checkinValue(habitId: habit.id, date: ds) == 1 {
-                            done += 1
-                        }
-                    }
+        var habitTracked: [String: Int] = [:]
+        var habitDone: [String: Int] = [:]
+        for month in 0..<12 {
+            let days = daysInMonth(year: year, month: month)
+            for day in 1...days {
+                guard let d = makeDate(year: year, month: month, day: day) else { continue }
+                if isFuture(d) && !isToday(d) { continue }
+                let ids = store.trackedHabitIds(on: d)
+                guard !ids.isEmpty else { continue }
+                let ds = formatDate(d)
+                let dayData = store.checkins[ds] ?? [:]
+                for id in ids {
+                    habitTracked[id, default: 0] += 1
+                    if dayData[id] == 1 { habitDone[id, default: 0] += 1 }
                 }
             }
-            let rate = tracked > 0 ? Double(done) / Double(tracked) * 100.0 : 0
+        }
+
+        var results: [HabitStat] = []
+        for (habitId, tracked) in habitTracked {
+            guard tracked > 0 else { continue }
+            guard let habit = store.habits.first(where: { $0.id == habitId }) else { continue }
+            let done = habitDone[habitId] ?? 0
+            let rate = Double(done) / Double(tracked) * 100.0
             results.append(HabitStat(habit: habit, done: done, tracked: tracked, rate: rate))
         }
 
-        return results.sorted { $0.rate > $1.rate }
+        return results.sorted {
+            if $0.rate != $1.rate { return $0.rate > $1.rate }
+            return $0.habit.sortOrder < $1.habit.sortOrder
+        }
     }
 
     func computeMonthlyStats() -> [MonthlyStat] {
-        let habits = store.activeHabits
         let currentMonth = Calendar.current.component(.month, from: Date()) - 1
         var results: [MonthlyStat] = []
 
@@ -585,14 +617,13 @@ struct YearAnalyticsView: View {
             for day in 1...days {
                 guard let d = makeDate(year: year, month: month, day: day) else { continue }
                 if isFuture(d) && !isToday(d) { continue }
+                let ids = store.trackedHabitIds(on: d)
+                guard !ids.isEmpty else { continue }
                 let ds = formatDate(d)
-                for habit in habits {
-                    if store.checkins[ds]?[habit.id] != nil {
-                        tracked += 1
-                        if store.checkinValue(habitId: habit.id, date: ds) == 1 {
-                            done += 1
-                        }
-                    }
+                let dayData = store.checkins[ds] ?? [:]
+                tracked += ids.count
+                for id in ids {
+                    if dayData[id] == 1 { done += 1 }
                 }
             }
             let rate = tracked > 0 ? Double(done) / Double(tracked) * 100.0 : 0

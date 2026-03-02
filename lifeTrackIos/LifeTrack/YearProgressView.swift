@@ -62,7 +62,7 @@ struct YearProgressView: View {
                     valueText: "\(missed)",
                     suffix: nil,
                     hint: L10n.hintMissedDays,
-                    color: Color(UIColor.systemRed)
+                    color: Color(UIColor.systemOrange)
                 )
             } else {
                 firstCard(
@@ -413,7 +413,13 @@ struct YearProgressView: View {
                 if let s = store.dayStatus(date: ds) {
                     tracked += 1
                     if s != .none { done += 1 }
-                    if s == .full { perfect += 1 }
+                }
+                // Perfect = actual 100% (all tracked habits done)
+                let ids = store.trackedHabitIds(on: d)
+                if !ids.isEmpty {
+                    let dayData = store.checkins[ds] ?? [:]
+                    let dayDone = ids.filter { dayData[$0] == 1 }.count
+                    if dayDone == ids.count { perfect += 1 }
                 }
             }
         }

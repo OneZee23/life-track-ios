@@ -8,6 +8,7 @@ private enum SelectedDay: Equatable {
 struct CheckInView: View {
     @EnvironmentObject var store: AppStore
     @State private var selectedDay: SelectedDay = .yesterday
+    @State private var hasSetInitialDay = false
     @State private var showSettings = false
     @State private var showConfetti = false
     @State private var showCelebration = false
@@ -100,6 +101,12 @@ struct CheckInView: View {
         .onAppear {
             showConfetti = false
             showCelebration = false
+            if !hasSetInitialDay {
+                hasSetInitialDay = true
+                if store.yesterdayStats() != nil {
+                    selectedDay = .today
+                }
+            }
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
