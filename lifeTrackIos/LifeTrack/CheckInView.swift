@@ -137,16 +137,30 @@ struct CheckInView: View {
             // Habit cards
             VStack(spacing: 8) {
                 ForEach(store.activeHabits) { habit in
-                    HabitToggleCard(
-                        habit: habit,
-                        isDone: isDone(habit.id),
-                        streak: habitStreak(for: habit),
-                        onToggle: { toggle(habitId: habit.id) }
-                    )
+                    VStack(spacing: 2) {
+                        HabitToggleCard(
+                            habit: habit,
+                            isDone: isDone(habit.id),
+                            streak: habitStreak(for: habit),
+                            onToggle: { toggle(habitId: habit.id) }
+                        )
+
+                        if isDone(habit.id) && habit.extendedField != nil {
+                            ExtendedCheckinPanel(
+                                config: habit.extendedField!,
+                                value: store.getExtra(habitId: habit.id, date: dateStr),
+                                onChange: { extra in
+                                    store.setExtra(habitId: habit.id, date: dateStr, extra: extra)
+                                }
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
                     .transition(.asymmetric(
                         insertion: .move(edge: .bottom).combined(with: .opacity),
                         removal: .opacity
                     ))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDone(habit.id))
                 }
             }
 
@@ -311,5 +325,243 @@ struct CheckInView: View {
         }
         confettiWork = confetti
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: confetti)
+    }
+}
+
+// MARK: - Extended Check-in Panel
+
+private struct ExtendedCheckinPanel: View {
+    let config: ExtendedFieldConfig
+    let value: CheckinExtra?
+    let onChange: (CheckinExtra) -> Void
+
+    @State private var isEditingValue = false
+    @State private var editValueText = ""
+    @FocusState private var editValueFocused: Bool
+
+    var body: some View {
+        Group {
+            switch config.type {
+            case .numeric:
+                numericPanel
+            case .text:
+                textPanel
+            case .rating:
+                ratingPanel
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
+    }
+
+    // MARK: - Numeric
+
+    private var numericPanel: some View {
+        let minVal = config.minValue ?? 0
+        let maxVal = config.maxValue ?? 99999
+        let step = config.step ?? 1
+        let current = value?.numericValue ?? minVal
+        let unit = config.unit ?? ""
+        let style: NumericInputStyle = config.maxValue == nil ? .stepper : (config.inputStyle ?? .slider)
+
+        return Group {
+            if style == .slider {
+                numericSlider(current: current, min: minVal, max: maxVal, step: step, unit: unit)
+            } else {
+                numericStepper(current: current, min: minVal, max: maxVal, step: step, unit: unit)
+            }
+        }
+    }
+
+    private func numericSlider(current: Double, min: Double, max: Double, step: Double, unit: String) -> some View {
+        HStack(spacing: 10) {
+            Slider(
+                value: Binding(
+                    get: { current },
+                    set: { newVal in
+                        var extra = value ?? CheckinExtra()
+                        extra.numericValue = newVal
+                        onChange(extra)
+                    }
+                ),
+                in: min...max,
+                step: step
+            )
+            .tint(Color(UIColor.systemGreen))
+
+            HStack(spacing: 2) {
+                Text(formatValue(current))
+                if !unit.isEmpty { Text(unit) }
+            }
+            .font(.system(size: 14, weight: .semibold, design: .monospaced))
+            .foregroundColor(.primary)
+            .frame(minWidth: 50, alignment: .trailing)
+        }
+    }
+
+    private func numericStepper(current: Double, min: Double, max: Double, step: Double, unit: String) -> some View {
+        HStack(spacing: 12) {
+            Spacer()
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                let newVal = Swift.max(min, current - step)
+                var extra = value ?? CheckinExtra()
+                extra.numericValue = newVal
+                onChange(extra)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(current <= min ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color(UIColor.systemGray5)))
+            }
+            .disabled(current <= min)
+
+            // Value — tap to type manually
+            Group {
+                if isEditingValue {
+                    HStack(spacing: 4) {
+                        TextField("", text: $editValueText)
+                            .keyboardType(.decimalPad)
+                            .font(.system(size: 17, weight: .bold, design: .monospaced))
+                            .multilineTextAlignment(.center)
+                            .focused($editValueFocused)
+                            .onAppear { editValueFocused = true }
+                            .onChange(of: editValueFocused) { focused in
+                                if !focused { commitEdit(min: min, max: max) }
+                            }
+
+                        Button {
+                            editValueFocused = false
+                        } label: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(Color(UIColor.systemGreen))
+                        }
+                    }
+                } else {
+                    HStack(spacing: 2) {
+                        Text(formatValue(current))
+                            .font(.system(size: 17, weight: .bold, design: .monospaced))
+                            .foregroundColor(.primary)
+                        if !unit.isEmpty {
+                            Text(unit)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        editValueText = formatValue(current)
+                        isEditingValue = true
+                    }
+                }
+            }
+            .frame(width: 110)
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                let newVal = Swift.min(max, current + step)
+                var extra = value ?? CheckinExtra()
+                extra.numericValue = newVal
+                onChange(extra)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(current >= max ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color(UIColor.systemGray5)))
+            }
+            .disabled(current >= max)
+
+            Spacer()
+        }
+    }
+
+    private func commitEdit(min: Double, max: Double) {
+        isEditingValue = false
+        guard let val = Double(editValueText) else { return }
+        let clamped = Swift.min(Swift.max(min, val), max)
+        let rounded = (clamped * 100).rounded() / 100
+        var extra = value ?? CheckinExtra()
+        extra.numericValue = rounded
+        onChange(extra)
+    }
+
+    // MARK: - Rating
+
+    private var ratingPanel: some View {
+        let currentRating = value?.ratingValue
+
+        return VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                ForEach(0...5, id: \.self) { rating in
+                    ratingCircle(rating: rating, currentRating: currentRating)
+                }
+            }
+            HStack(spacing: 4) {
+                ForEach(6...10, id: \.self) { rating in
+                    ratingCircle(rating: rating, currentRating: currentRating)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func ratingCircle(rating: Int, currentRating: Int?) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            var extra = value ?? CheckinExtra()
+            extra.ratingValue = currentRating == rating ? nil : rating
+            onChange(extra)
+        } label: {
+            Text("\(rating)")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(currentRating == rating ? .white : .primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(currentRating == rating
+                              ? Color(UIColor.systemGreen)
+                              : Color(UIColor.systemGray5))
+                )
+        }
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: currentRating)
+    }
+
+    // MARK: - Text
+
+    private var textPanel: some View {
+        HStack(spacing: 8) {
+            TextField(L10n.extendedNotePlaceholder, text: Binding(
+                get: { value?.textValue ?? "" },
+                set: { newText in
+                    let limited = String(newText.prefix(140))
+                    var extra = value ?? CheckinExtra()
+                    extra.textValue = limited.isEmpty ? nil : limited
+                    onChange(extra)
+                }
+            ))
+            .font(.system(size: 15))
+            .foregroundColor(.primary)
+
+            Text("\((value?.textValue ?? "").count)/140")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func formatValue(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", value)
+            : String(format: "%.1f", value)
     }
 }

@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.2.6 | **Started:** Feb 2026
+**Status:** v0.3.0 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---
@@ -118,7 +118,7 @@ life-track-ios/
 │   ├── LifeTrack/
 │   │   ├── LifeTrackApp.swift          # @main entry point
 │   │   ├── ContentView.swift           # TabView (3 tabs)
-│   │   ├── Models.swift                # Habit, DayStatus, HabitStat, MonthlyStat
+│   │   ├── Models.swift                # Habit, DayStatus, ExtendedFieldConfig, CheckinExtra
 │   │   ├── AppStore.swift              # ObservableObject, UserDefaults persistence
 │   │   ├── DateUtils.swift             # Date helpers
 │   │   ├── L10n.swift                  # Localization (ru/en, runtime switching)
@@ -244,9 +244,14 @@ APP_STORE_ISSUER_ID=<your-issuer-id>
 - [x] Onboarding — 4-page animated intro on first launch (SwiftUI native)
 - [x] Compassionate Coach — warm messages on missed days in daily greeting
 
-### v0.3.0 (planned)
+### v0.3.0 (done — current)
 
-- [ ] Detailed check-in (optional numeric, text, rating per habit)
+- [x] Extended check-in (optional numeric/text/rating per habit, auto-panel on toggle)
+- [x] Numeric input: slider or stepper with configurable unit, min/max, step
+- [x] Text input: free-form comment up to 140 chars
+- [x] Rating input: 0-10 scale with tap buttons
+- [x] Extended data display in DayProgressView
+- [x] Backward-compatible data model (separate `checkinExtras` storage)
 
 ### Future (ideas)
 

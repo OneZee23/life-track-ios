@@ -373,4 +373,61 @@ enum L10n {
     static func coachHabitNudge(_ name: String) -> String {
         isRu ? "Привычка «\(name)» ждёт тебя" : "«\(name)» is waiting for you"
     }
+
+    // MARK: - Extended Check-in
+
+    static var extendedCheckin: String {
+        isRu ? "Расширенный чекин" : "Extended check-in"
+    }
+
+    static var extendedNumeric: String {
+        isRu ? "Числовой" : "Numeric"
+    }
+
+    static var extendedText: String {
+        isRu ? "Комментарий" : "Comment"
+    }
+
+    static var extendedRating: String {
+        isRu ? "Оценка" : "Rating"
+    }
+
+    static var extendedUnit: String {
+        isRu ? "Единица" : "Unit"
+    }
+
+    static var extendedUnitHint: String {
+        isRu ? "ч, км, л..." : "h, km, L..."
+    }
+
+    static var extendedMin: String {
+        isRu ? "Мин" : "Min"
+    }
+
+    static var extendedMax: String {
+        isRu ? "Макс" : "Max"
+    }
+
+    static var extendedStep: String {
+        isRu ? "Шаг" : "Step"
+    }
+
+    static var extendedSlider: String {
+        isRu ? "Слайдер" : "Slider"
+    }
+
+    static var extendedStepper: String {
+        isRu ? "Счётчик" : "Stepper"
+    }
+
+    static var extendedInputStyle: String {
+        isRu ? "Ввод" : "Input"
+    }
+
+    static var extendedNotePlaceholder: String {
+        isRu ? "Заметка..." : "Note..."
+    }
+    static var extendedPreview: String {
+        isRu ? "Превью" : "Preview"
+    }
 }

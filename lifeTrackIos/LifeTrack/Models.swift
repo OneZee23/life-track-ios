@@ -1,6 +1,34 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Extended Check-in Types
+
+enum ExtendedFieldType: String, Codable {
+    case numeric
+    case text
+    case rating
+}
+
+enum NumericInputStyle: String, Codable {
+    case slider
+    case stepper
+}
+
+struct ExtendedFieldConfig: Codable, Equatable, Hashable {
+    var type: ExtendedFieldType
+    var unit: String?                    // numeric only, max 6 chars
+    var minValue: Double?                // numeric only, >= 0
+    var maxValue: Double?                // numeric only, <= 10000
+    var step: Double?                    // numeric only, default 1
+    var inputStyle: NumericInputStyle?   // numeric only, default .slider
+}
+
+struct CheckinExtra: Codable, Equatable {
+    var numericValue: Double?
+    var textValue: String?
+    var ratingValue: Int?
+}
+
 // MARK: - Habit
 
 struct Habit: Identifiable, Codable, Equatable, Hashable {
@@ -10,6 +38,7 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
     var sortOrder: Int = 0
     var createdAt: Date = Date()
     var deletedAt: Date? = nil
+    var extendedField: ExtendedFieldConfig? = nil
 
     var isDeleted: Bool { deletedAt != nil }
 }

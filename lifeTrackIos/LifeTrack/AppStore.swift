@@ -7,6 +7,7 @@ class AppStore: ObservableObject {
         didSet { _activeHabitIds = nil }
     }
     @Published var checkins: [String: [String: Int]] = [:]  // date -> habitId -> 0|1
+    @Published var checkinExtras: [String: [String: CheckinExtra]] = [:]  // date -> habitId -> extra
     @Published var themeMode: String = "auto"  // "auto" | "light" | "dark"
     @Published var lang: String = "auto"       // "auto" | "ru" | "en"
     @Published var notifEnabled: Bool = false
@@ -24,12 +25,14 @@ class AppStore: ObservableObject {
     private let notifMinuteKey  = "lt_notif_minute"
     private let greetingDateKey = "lt_greeting_shown_date"
     private let onboardingKey = "lt_onboarding_completed"
+    private let extrasKey = "lt_checkin_extras_v1"
 
     // MARK: - Undo/Redo
 
     private struct Snapshot {
         let habits: [Habit]
         let checkins: [String: [String: Int]]
+        let checkinExtras: [String: [String: CheckinExtra]]
     }
 
     private var undoStack: [Snapshot] = []
@@ -40,24 +43,26 @@ class AppStore: ObservableObject {
     var canRedo: Bool { !redoStack.isEmpty }
 
     private func pushUndo() {
-        undoStack.append(Snapshot(habits: habits, checkins: checkins))
+        undoStack.append(Snapshot(habits: habits, checkins: checkins, checkinExtras: checkinExtras))
         if undoStack.count > maxUndo { undoStack.removeFirst() }
         redoStack.removeAll()
     }
 
     func undo() {
         guard let snap = undoStack.popLast() else { return }
-        redoStack.append(Snapshot(habits: habits, checkins: checkins))
+        redoStack.append(Snapshot(habits: habits, checkins: checkins, checkinExtras: checkinExtras))
         habits = snap.habits
         checkins = snap.checkins
+        checkinExtras = snap.checkinExtras
         save()
     }
 
     func redo() {
         guard let snap = redoStack.popLast() else { return }
-        undoStack.append(Snapshot(habits: habits, checkins: checkins))
+        undoStack.append(Snapshot(habits: habits, checkins: checkins, checkinExtras: checkinExtras))
         habits = snap.habits
         checkins = snap.checkins
+        checkinExtras = snap.checkinExtras
         save()
     }
 
@@ -128,7 +133,8 @@ class AppStore: ObservableObject {
 
     func toggleCheckin(habitId: String, date: String) {
         var dayData = checkins[date] ?? [:]
-        dayData[habitId] = (dayData[habitId] ?? 0) == 1 ? 0 : 1
+        let wasChecked = (dayData[habitId] ?? 0) == 1
+        dayData[habitId] = wasChecked ? 0 : 1
         // Ensure all active habits have explicit entries (0 if untouched)
         for habit in activeHabits {
             if dayData[habit.id] == nil {
@@ -136,6 +142,35 @@ class AppStore: ObservableObject {
             }
         }
         checkins[date] = dayData
+        // Clear extra data when unchecking
+        if wasChecked {
+            checkinExtras[date]?.removeValue(forKey: habitId)
+            if checkinExtras[date]?.isEmpty == true {
+                checkinExtras.removeValue(forKey: date)
+            }
+        }
+        save()
+    }
+
+    // MARK: - Checkin Extras
+
+    func getExtra(habitId: String, date: String) -> CheckinExtra? {
+        checkinExtras[date]?[habitId]
+    }
+
+    func setExtra(habitId: String, date: String, extra: CheckinExtra) {
+        if checkinExtras[date] == nil {
+            checkinExtras[date] = [:]
+        }
+        checkinExtras[date]?[habitId] = extra
+        save()
+    }
+
+    func clearExtra(habitId: String, date: String) {
+        checkinExtras[date]?.removeValue(forKey: habitId)
+        if checkinExtras[date]?.isEmpty == true {
+            checkinExtras.removeValue(forKey: date)
+        }
         save()
     }
 
@@ -477,18 +512,19 @@ class AppStore: ObservableObject {
 
     // MARK: - Habits
 
-    func addHabit(name: String, emoji: String) {
+    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil) {
         pushUndo()
         let maxOrder = activeHabits.map { $0.sortOrder }.max() ?? -1
-        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1))
+        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField))
         save()
     }
 
-    func updateHabit(id: String, name: String, emoji: String) {
+    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil) {
         pushUndo()
         guard let idx = habits.firstIndex(where: { $0.id == id }) else { return }
         habits[idx].name = name
         habits[idx].emoji = emoji
+        habits[idx].extendedField = extendedField
         save()
     }
 
@@ -612,6 +648,9 @@ class AppStore: ObservableObject {
         if let d = try? JSONEncoder().encode(checkins) {
             UserDefaults.standard.set(d, forKey: checkinsKey)
         }
+        if let d = try? JSONEncoder().encode(checkinExtras) {
+            UserDefaults.standard.set(d, forKey: extrasKey)
+        }
         UserDefaults.standard.set(themeMode, forKey: themeKey)
         UserDefaults.standard.set(lang, forKey: langKey)
         UserDefaults.standard.set(notifEnabled, forKey: notifEnabledKey)
@@ -627,6 +666,10 @@ class AppStore: ObservableObject {
         if let d = UserDefaults.standard.data(forKey: checkinsKey),
            let v = try? JSONDecoder().decode([String: [String: Int]].self, from: d) {
             checkins = v
+        }
+        if let d = UserDefaults.standard.data(forKey: extrasKey),
+           let v = try? JSONDecoder().decode([String: [String: CheckinExtra]].self, from: d) {
+            checkinExtras = v
         }
         // Theme: migrate from legacy isDark bool
         if let saved = UserDefaults.standard.string(forKey: themeKey) {

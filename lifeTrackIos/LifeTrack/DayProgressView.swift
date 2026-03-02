@@ -127,40 +127,50 @@ struct DayProgressView: View {
     func habitRow(habit: Habit) -> some View {
         let done = store.checkinValue(habitId: habit.id, date: dateStr) == 1
         let hasData = store.checkins[dateStr]?[habit.id] != nil
+        let extra = store.getExtra(habitId: habit.id, date: dateStr)
 
-        return HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(done ? Color(UIColor.systemGreen).opacity(0.15) : Color(UIColor.systemGray5))
-                    .frame(width: 40, height: 40)
-                Text(habit.emoji)
-                    .font(.system(size: 18))
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(done ? Color(UIColor.systemGreen).opacity(0.15) : Color(UIColor.systemGray5))
+                        .frame(width: 40, height: 40)
+                    Text(habit.emoji)
+                        .font(.system(size: 18))
+                }
+
+                Text(habit.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if hasData {
+                    ZStack {
+                        Circle()
+                            .fill(done ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                            .frame(width: 32, height: 32)
+                        if done {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                        } else {
+                            Text("—")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } else {
+                    Text("—")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color(UIColor.systemGray4))
+                }
             }
 
-            Text(habit.name)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if hasData {
-                ZStack {
-                    Circle()
-                        .fill(done ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                        .frame(width: 32, height: 32)
-                    if done {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.white)
-                    } else {
-                        Text("—")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    }
-                }
-            } else {
-                Text("—")
-                    .font(.system(size: 13))
-                    .foregroundColor(Color(UIColor.systemGray4))
+            // Extended data display
+            if let extra = extra {
+                extraLabel(extra: extra, config: habit.extendedField)
+                    .padding(.leading, 52)
+                    .padding(.top, 4)
             }
         }
         .padding(.horizontal, 16)
@@ -169,5 +179,28 @@ struct DayProgressView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(UIColor.secondarySystemGroupedBackground))
         )
+    }
+
+    private func extraLabel(extra: CheckinExtra, config: ExtendedFieldConfig?) -> some View {
+        Group {
+            if let numVal = extra.numericValue {
+                let unit = config?.unit ?? ""
+                let formatted = numVal.truncatingRemainder(dividingBy: 1) == 0
+                    ? String(format: "%.0f", numVal)
+                    : String(format: "%.1f", numVal)
+                Text("\(formatted) \(unit)")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            } else if let rating = extra.ratingValue {
+                Text("\(rating)/10")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            } else if let text = extra.textValue, !text.isEmpty {
+                Text("«\(text)»")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+        }
     }
 }
