@@ -118,6 +118,7 @@ struct DayProgressView: View {
                             : .secondary
                     )
             }
+
         }
     }
 

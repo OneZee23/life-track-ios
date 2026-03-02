@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.2.1 | **Started:** Feb 2026
+**Status:** v0.2.4 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---
@@ -58,10 +58,12 @@ Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses 
 
 ### Check-in Screen
 - Tap card to toggle: gray (skip) → green (done) — saves instantly
+- Per-habit streak counter (fire icon + day count)
 - Spring scale animation + haptic feedback
 - Progress bar: X/N filled
 - Day switcher: Yesterday / Today with sliding pill selector
 - 100% completion → celebration overlay with confetti, haptic, and streak count
+- Daily greeting with yesterday's stats on first open
 
 ### Progress Screen (Drill-down)
 - **Year:** GitHub-style heatmap with 5-level color gradient + summary cards (day counter, completed, perfect)
@@ -75,14 +77,16 @@ Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses 
 
 ### Habits Management
 - Add / edit / delete with confirmation dialog
+- Undo/Redo — last 5 changes (add, edit, delete, reorder)
 - Soft-delete preserves check-in history
 - Emoji picker (20 presets), max 10 habits
-- Drag & drop reorder
+- Drag & drop reorder (always-on drag handles)
 - Default: Sleep, Activity, Nutrition, Mental, Projects
 
 ### Settings
 - Theme: Auto (system) / Light / Dark with animated day/night scene
 - Language: System / Russian / English — switches instantly
+- Push notifications — daily reminder at user-chosen time
 - About section with project info
 - Feedback link (@onezee123 on Telegram)
 - Social links (Telegram channel, YouTube)
@@ -122,6 +126,7 @@ life-track-ios/
 │   │   ├── CheckInView.swift           # Daily check-in (today/yesterday)
 │   │   ├── HabitToggleCard.swift       # Tap card with spring animation
 │   │   ├── ConfettiView.swift          # Celebration confetti overlay
+│   │   ├── DailyGreetingView.swift     # Daily greeting with yesterday stats
 │   │   │
 │   │   ├── ProgressRootView.swift      # Progress container + navigation
 │   │   ├── YearProgressView.swift      # Year heatmap + summary cards
@@ -223,32 +228,32 @@ APP_STORE_ISSUER_ID=<your-issuer-id>
 - [x] Auto version display from bundle in Settings
 - [x] Progress views show today's real check-in status
 
-### v0.2.1 (done)
+### v0.2.x (done — current)
 
 - [x] GitHub-style heatmap with 5-level color gradient
-- [x] Year analytics — completion rate, streaks, habit ranking, monthly breakdown
-- [x] Month analytics — completion rate, streaks, habit ranking, weekly breakdown
-- [x] Day navigation arrows (left/right)
-- [x] Adaptive first summary card (day counter / missed days / total days)
-- [x] Haptic feedback on all progress interactions
-- [x] Completion rate counts per habit check-in, not per day
+- [x] Year & month analytics — completion rate, streaks, habit ranking, breakdowns
+- [x] Per-habit streaks and heatmaps
+- [x] Growth Language — motivational tone across all texts
+- [x] Push notifications — daily reminder at user-chosen time
+- [x] Daily greeting with yesterday's stats
+- [x] Undo/Redo (last 5 changes), delete confirmation
+- [x] Date-aware analytics algorithm (tracks habits that existed on each date)
 
 ### v0.3.0 (planned)
 
-- [ ] Push notifications (daily reminder at user-chosen time)
-- [ ] Onboarding (2-3 screens with app preview)
-- [ ] iOS widget (today's streak)
-- [ ] Export data (CSV/JSON)
 - [ ] Detailed check-in (optional numeric, text, rating per habit)
 
-### v0.4.0 (ideas)
+### Future (ideas)
 
+- [ ] Onboarding (2-3 screens with app preview)
+- [ ] Compassionate Coach (soft messages on missed days)
+- [ ] iOS widget (today's streak)
+- [ ] Export data (CSV/JSON)
 - [ ] Online sync (server + local offline data merge)
 - [ ] Apple Watch companion
-- [ ] Advanced mode (0-5 scale for power users)
-- [ ] Sharing streak cards (Instagram stories)
 - [ ] Habit frequency settings (weekdays, N times/week)
 - [ ] Achievements & badges (7/21/66 day streaks)
+- [ ] Sharing streak cards (Instagram stories)
 
 ---
 

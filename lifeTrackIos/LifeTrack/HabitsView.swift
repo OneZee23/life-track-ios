@@ -10,7 +10,7 @@ struct HabitsView: View {
 
     @State private var showAddForm = false
     @State private var editingHabit: Habit? = nil
-    @State private var editMode: EditMode = .inactive
+    @State private var habitToDelete: Habit? = nil
 
     var body: some View {
         ZStack {
@@ -27,13 +27,31 @@ struct HabitsView: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(editMode == .active ? L10n.done : L10n.edit) {
-                        withAnimation {
-                            editMode = editMode == .active ? .inactive : .active
+
+                    // Undo / Redo
+                    if store.canUndo || store.canRedo {
+                        HStack(spacing: 0) {
+                            undoRedoButton(
+                                systemName: "arrow.uturn.backward",
+                                enabled: store.canUndo
+                            ) {
+                                withAnimation { store.undo() }
+                            }
+                            undoRedoButton(
+                                systemName: "arrow.uturn.forward",
+                                enabled: store.canRedo
+                            ) {
+                                withAnimation { store.redo() }
+                            }
                         }
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color(UIColor.systemGray5))
+                        )
+                        .transition(.scale.combined(with: .opacity))
                     }
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(Color(UIColor.systemGreen))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -44,17 +62,16 @@ struct HabitsView: View {
                         HabitRow(
                             habit: habit,
                             onEdit: { editingHabit = habit },
-                            onDelete: {
-                                withAnimation { store.deleteHabit(id: habit.id) }
-                            }
+                            onDelete: { habitToDelete = habit }
                         )
                         .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     }
                     .onMove { store.moveHabits(from: $0, to: $1) }
+                    .deleteDisabled(true)
                 }
                 .listStyle(.insetGrouped)
-                .environment(\.editMode, $editMode)
+                .environment(\.editMode, .constant(.active))
 
                 // Add button
                 if store.activeHabits.count < 10 && !showAddForm {
@@ -104,6 +121,44 @@ struct HabitsView: View {
                 editingHabit = nil
             }
         }
+        .confirmationDialog(
+            L10n.deleteConfirmTitle,
+            isPresented: Binding(
+                get: { habitToDelete != nil },
+                set: { if !$0 { habitToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(L10n.delete, role: .destructive) {
+                if let habit = habitToDelete {
+                    withAnimation { store.deleteHabit(id: habit.id) }
+                }
+                habitToDelete = nil
+            }
+        } message: {
+            if let habit = habitToDelete {
+                Text(L10n.deleteConfirmMessage(habit.emoji, habit.name))
+            }
+        }
+    }
+
+    // MARK: - Undo/Redo button
+
+    private func undoRedoButton(
+        systemName: String,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(enabled ? Color(UIColor.systemGreen) : Color(UIColor.systemGray4))
+                .frame(width: 32, height: 28)
+        }
+        .disabled(!enabled)
     }
 }
 
@@ -128,21 +183,11 @@ struct HabitRow: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(action: onEdit) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: "pencil")
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(UIColor.systemBlue))
-                }
-            }
-            .buttonStyle(.plain)
         }
         .padding(.vertical, 4)
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        .contentShape(Rectangle())
+        .onTapGesture { onEdit() }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive, action: onDelete) {
                 Label(L10n.delete, systemImage: "trash")
             }

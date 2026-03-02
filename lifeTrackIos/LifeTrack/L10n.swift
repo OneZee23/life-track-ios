@@ -58,8 +58,8 @@ enum L10n {
 
     static var aboutDescription: String {
         isRu
-        ? "LifeTrack — минималистичный трекер привычек. Отмечай свой день за 5 секунд, смотри прогресс на тепловой карте. Без оценок, без стресса — просто делал или не делал."
-        : "LifeTrack is a minimalist habit tracker. Log your day in 5 seconds, see your progress on a heat map. No ratings, no stress — just did or didn't."
+        ? "LifeTrack — минималистичный трекер привычек. Отмечай свой день за 5 секунд, смотри прогресс на тепловой карте. Без оценок, без стресса — просто отмечай свой путь."
+        : "LifeTrack is a minimalist habit tracker. Log your day in 5 seconds, see your progress on a heat map. No ratings, no stress — just track your journey."
     }
 
     static var aboutMVP: String {
@@ -90,10 +90,10 @@ enum L10n {
 
     // MARK: - Day progress
 
-    static var awaitingCheckIn: String { isRu ? "Ожидает чек-ина"  : "Awaiting check-in" }
+    static var awaitingCheckIn: String { isRu ? "Ждёт тебя"        : "Ready for you" }
     static var allDone:         String { isRu ? "Все выполнено!"    : "All done!" }
-    static var partial:         String { isRu ? "Частично"          : "Partial" }
-    static var notDone:         String { isRu ? "Не выполнено"      : "Not done" }
+    static var partial:         String { isRu ? "Есть прогресс!"    : "Making progress!" }
+    static var notDone:         String { isRu ? "Пауза"             : "Rest day" }
 
     // MARK: - Month progress
 
@@ -109,13 +109,13 @@ enum L10n {
     static var completed: String { isRu ? "Выполнено" : "Completed" }
     static var dayOfYear: String { isRu ? "День"      : "Day" }
     static var perfect:   String { isRu ? "Идеальных" : "Perfect" }
-    static var missed:    String { isRu ? "Пропуск"   : "Missed" }
+    static var missed:    String { isRu ? "Перерыв"   : "Break" }
     static var today:     String { isRu ? "Сегодня"   : "Today" }
     static var less:      String { isRu ? "Меньше"    : "Less" }
     static var more:      String { isRu ? "Больше"    : "More" }
 
     static var hintDayOfYear:  String { isRu ? "Текущий день года"  : "Current day of year" }
-    static var hintMissedDays: String { isRu ? "Дни без чекина"    : "Days without check-in" }
+    static var hintMissedDays: String { isRu ? "Дни отдыха"        : "Rest days" }
     static var hintTotalDays:  String { isRu ? "Всего дней в году" : "Total days in year" }
     static var totalDays:      String { isRu ? "Всего"             : "Total" }
     static var hintCompleted: String { isRu ? "Дни с выполнением"     : "Days with progress" }
@@ -218,6 +218,87 @@ enum L10n {
             return "\(monthStr) \(day), \(yearStr)"
         }
     }
+
+    // MARK: - Notifications
+
+    static var reminders:       String { isRu ? "Напоминания"           : "Reminders" }
+    static var reminderToggle:  String { isRu ? "Ежедневное напоминание" : "Daily reminder" }
+    static var reminderTime:    String { isRu ? "Время"                 : "Time" }
+    static var reminderFooter:  String { isRu ? "Одно мягкое напоминание в день — без спама" : "One gentle reminder per day — no spam" }
+
+    static func randomReminder() -> String {
+        let options: [String] = isRu
+            ? ["Привет! Самое время отметить свой день",
+               "Твои привычки ждут тебя",
+               "5 секунд — и день записан",
+               "Зайди отметить свой прогресс",
+               "Пора заглянуть в LifeTrack"]
+            : ["Hey! Time to log your day",
+               "Your habits are waiting for you",
+               "5 seconds — and your day is logged",
+               "Check in and track your progress",
+               "Time to visit LifeTrack"]
+        return options.randomElement()!
+    }
+
+    // MARK: - Daily greeting
+
+    static var greetingMorning: String { isRu ? "Доброе утро" : "Good morning" }
+    static var greetingDay:     String { isRu ? "Добрый день" : "Good afternoon" }
+    static var greetingEvening: String { isRu ? "Добрый вечер" : "Good evening" }
+
+    static func greeting() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return greetingMorning }
+        if hour < 18 { return greetingDay }
+        return greetingEvening
+    }
+
+    static func greetingEmoji() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "☀️" }
+        if hour < 18 { return "🌤️" }
+        return "🌙"
+    }
+
+    static func greetingHabitsWaiting(_ count: Int) -> String {
+        isRu ? "\(count) \(pluralHabits(count)) \(count == 1 ? "ждёт" : "ждут") тебя сегодня"
+             : "\(count) \(count == 1 ? "habit" : "habits") waiting for you today"
+    }
+
+    static func greetingYesterdayResult(_ done: Int, _ total: Int) -> String {
+        if done == total && total > 0 {
+            return isRu ? "Вчера: всё выполнено ✓" : "Yesterday: all done ✓"
+        }
+        return isRu ? "Вчера: \(done) из \(total)" : "Yesterday: \(done) of \(total)"
+    }
+
+    static var greetingNoYesterday: String { isRu ? "Вчера: перерыв" : "Yesterday: rest day" }
+    static var greetingTapToDismiss: String { isRu ? "Нажми, чтобы начать" : "Tap to start" }
+
+    static func pluralHabits(_ n: Int) -> String {
+        if !isRu { return n == 1 ? "habit" : "habits" }
+        let mod10 = n % 10, mod100 = n % 100
+        if mod10 == 1 && mod100 != 11 { return "привычка" }
+        if mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14) { return "привычки" }
+        return "привычек"
+    }
+
+    // MARK: - Delete confirmation
+
+    static var deleteConfirmTitle: String { isRu ? "Удалить привычку?" : "Delete habit?" }
+    static func deleteConfirmMessage(_ emoji: String, _ name: String) -> String {
+        isRu ? "Привычка \(emoji) \(name) будет удалена"
+             : "Habit \(emoji) \(name) will be deleted"
+    }
+
+    // MARK: - Placeholders
+
+    static var futureTitle: String { isRu ? "Это ещё впереди" : "This is still ahead" }
+    static var futureSubtitle: String { isRu ? "Будущее зависит только от вас" : "The future depends only on you" }
+
+    static var emptyTitle: String { isRu ? "Здесь был перерыв" : "This was a break" }
+    static var emptySubtitle: String { isRu ? "Ничего страшного — главное продолжать" : "No worries — the key is to keep going" }
 
     // MARK: - Default habits
 

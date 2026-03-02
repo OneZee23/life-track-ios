@@ -7,6 +7,18 @@ struct WeekProgressView: View {
     let onWeekChange: (Date) -> Void
     let onDayTap: (Date) -> Void
 
+    private var isFutureWeek: Bool {
+        !days.contains(where: { !isFuture($0) || isToday($0) })
+    }
+
+    private var hasNoData: Bool {
+        !days.contains { day in
+            guard !isFuture(day) || isToday(day) else { return false }
+            let ds = formatDate(day)
+            return store.dayStatus(date: ds) != nil
+        }
+    }
+
     private var days: [Date] {
         (0..<7).compactMap {
             Calendar.current.date(byAdding: .day, value: $0, to: weekStartDate)
@@ -56,11 +68,17 @@ struct WeekProgressView: View {
             // Day chips
             dayStrip
 
-            // Per-habit bars
-            habitBars
+            if isFutureWeek {
+                weekPlaceholder(emoji: "🔮", title: L10n.futureTitle, subtitle: L10n.futureSubtitle)
+            } else if hasNoData {
+                weekPlaceholder(emoji: "😴", title: L10n.emptyTitle, subtitle: L10n.emptySubtitle)
+            } else {
+                // Per-habit bars
+                habitBars
 
-            // Week total
-            weekTotal
+                // Week total
+                weekTotal
+            }
         }
     }
 
@@ -144,7 +162,8 @@ struct WeekProgressView: View {
     // MARK: - Habit bars
 
     var habitBars: some View {
-        let visibleHabits = store.activeHabits
+        let weekEnd = Calendar.current.date(byAdding: .day, value: 6, to: weekStartDate)!
+        let visibleHabits = store.habitsExisted(from: weekStartDate, to: weekEnd)
 
         return VStack(spacing: 8) {
             ForEach(visibleHabits) { habit in
@@ -234,6 +253,25 @@ struct WeekProgressView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
+    }
+
+    func weekPlaceholder(emoji: String, title: String, subtitle: String) -> some View {
+        VStack(spacing: 12) {
+            Text(emoji)
+                .font(.system(size: 48))
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.primary)
+            Text(subtitle)
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(UIColor.secondarySystemGroupedBackground))

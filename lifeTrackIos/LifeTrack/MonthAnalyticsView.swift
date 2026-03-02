@@ -10,15 +10,44 @@ struct MonthAnalyticsView: View {
 
     private var currentYear: Int { Calendar.current.component(.year, from: Date()) }
     private var currentMonth: Int { Calendar.current.component(.month, from: Date()) - 1 }
+    private var isFutureMonth: Bool {
+        year > currentYear || (year == currentYear && month > currentMonth)
+    }
+
+    private var hasNoData: Bool { computeCompletionRate().tracked == 0 }
 
     var body: some View {
         VStack(spacing: 16) {
             navHeader
-            completionRateCard
-            streakCards
-            habitRankingCard
-            weeklyBreakdownCard
+            if isFutureMonth {
+                placeholder(emoji: "🔮", title: L10n.futureTitle, subtitle: L10n.futureSubtitle)
+            } else if hasNoData {
+                placeholder(emoji: "😴", title: L10n.emptyTitle, subtitle: L10n.emptySubtitle)
+            } else {
+                completionRateCard
+                habitRankingCard
+                weeklyBreakdownCard
+            }
         }
+    }
+
+    func placeholder(emoji: String, title: String, subtitle: String) -> some View {
+        VStack(spacing: 12) {
+            Text(emoji)
+                .font(.system(size: 48))
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.primary)
+            Text(subtitle)
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+        )
     }
 
     // MARK: - Nav header
@@ -77,63 +106,29 @@ struct MonthAnalyticsView: View {
         )
     }
 
-    // MARK: - Streaks
-
-    var streakCards: some View {
-        let best = store.bestStreak(year: year, month: month)
-        let cur = store.currentStreak(year: year, month: month)
-
-        return HStack(spacing: 8) {
-            streakCard(label: L10n.bestStreak, value: best)
-            streakCard(label: L10n.currentStreak, value: cur)
-        }
-    }
-
-    func streakCard(label: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            HStack(alignment: .bottom, spacing: 4) {
-                Text("\(value)")
-                    .font(.system(size: 28, weight: .black, design: .rounded))
-                    .foregroundColor(Color(UIColor.systemGreen))
-                Text(L10n.pluralDays(value))
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 4)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
-    }
-
     // MARK: - Habit ranking
 
+    @ViewBuilder
     var habitRankingCard: some View {
         let stats = computeHabitStats()
 
-        return VStack(alignment: .leading, spacing: 12) {
-            Text(L10n.habits)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
+        if !stats.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.habits)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
 
-            ForEach(Array(stats.enumerated()), id: \.offset) { _, item in
-                habitRow(item: item)
+                ForEach(Array(stats.enumerated()), id: \.offset) { _, item in
+                    habitRow(item: item)
+                }
             }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+            )
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
     }
 
     func habitRow(item: HabitStat) -> some View {
@@ -182,39 +177,51 @@ struct MonthAnalyticsView: View {
 
     // MARK: - Weekly breakdown
 
+    @ViewBuilder
     var weeklyBreakdownCard: some View {
         let stats = computeWeeklyStats()
+        let hasData = stats.contains { $0.tracked > 0 }
 
-        return VStack(alignment: .leading, spacing: 12) {
-            Text(L10n.weeklyBreakdown)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
+        if hasData {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.weeklyBreakdown)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
 
-            ForEach(stats, id: \.weekStart) { item in
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    onWeekTap(item.weekStart)
-                } label: {
-                    weekRow(item: item)
+                ForEach(stats, id: \.weekStart) { item in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onWeekTap(item.weekStart)
+                    } label: {
+                        weekRow(item: item)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+            )
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
     }
 
     func weekRow(item: WeeklyStat) -> some View {
         let label = weekLabel(item: item)
-        return HStack(spacing: 10) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.primary)
-                .frame(width: 100, alignment: .leading)
+        return VStack(spacing: 6) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(item.tracked > 0 ? "\(Int(item.rate))%" : "—")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundColor(item.rate >= 75 ? Color(UIColor.systemGreen) : .secondary)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color(UIColor.systemGray3))
+            }
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -227,28 +234,23 @@ struct MonthAnalyticsView: View {
                 }
             }
             .frame(height: 5)
-
-            Text(item.tracked > 0 ? "\(Int(item.rate))%" : "—")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundColor(item.rate >= 75 ? Color(UIColor.systemGreen) : .secondary)
-                .frame(width: 36, alignment: .trailing)
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(Color(UIColor.systemGray3))
         }
     }
 
     func weekLabel(item: WeeklyStat) -> String {
         let cal = Calendar.current
-        let d1 = cal.component(.day, from: item.weekStart)
-        let d2 = cal.component(.day, from: item.weekEnd)
-        let m1 = cal.component(.month, from: item.weekStart) - 1
-        let m2 = cal.component(.month, from: item.weekEnd) - 1
-        if m1 == m2 {
-            return "\(d1) – \(d2) \(L10n.monthsShort[m1])"
+        let d1 = cal.component(.day, from: item.displayStart)
+        let d2 = cal.component(.day, from: item.displayEnd)
+        let m1 = cal.component(.month, from: item.displayStart) - 1
+        let m2 = cal.component(.month, from: item.displayEnd) - 1
+        // Single day
+        if cal.isDate(item.displayStart, inSameDayAs: item.displayEnd) {
+            return "\(d1) \(L10n.monthsShort[m1].lowercased())"
         }
-        return "\(d1) \(L10n.monthsShort[m1]) – \(d2) \(L10n.monthsShort[m2])"
+        if m1 == m2 {
+            return "\(d1) – \(d2) \(L10n.monthsShort[m1].lowercased())"
+        }
+        return "\(d1) \(L10n.monthsShort[m1].lowercased()) – \(d2) \(L10n.monthsShort[m2].lowercased())"
     }
 
     // MARK: - Nav arrow
@@ -279,8 +281,10 @@ struct MonthAnalyticsView: View {
     }
 
     struct WeeklyStat: Identifiable {
-        let weekStart: Date
-        let weekEnd: Date
+        let weekStart: Date       // Full week start (for navigation)
+        let weekEnd: Date         // Full week end
+        let displayStart: Date    // Clamped to month (for label)
+        let displayEnd: Date      // Clamped to month (for label)
         let done: Int
         let tracked: Int
         let rate: Double
@@ -288,60 +292,59 @@ struct MonthAnalyticsView: View {
     }
 
     func computeCompletionRate() -> (done: Int, tracked: Int, rate: Double) {
-        let habits = store.activeHabits
-        guard !habits.isEmpty else { return (0, 0, 0) }
-
         var totalDone = 0, totalTracked = 0
         let days = daysInMonth(year: year, month: month)
         for day in 1...days {
             guard let d = makeDate(year: year, month: month, day: day) else { continue }
             if isFuture(d) && !isToday(d) { continue }
+            let ids = store.trackedHabitIds(on: d)
+            guard !ids.isEmpty else { continue }
             let ds = formatDate(d)
-
-            var dayHasData = false
-            for habit in habits {
-                if store.checkins[ds]?[habit.id] != nil {
-                    dayHasData = true
-                    totalTracked += 1
-                    if store.checkinValue(habitId: habit.id, date: ds) == 1 {
-                        totalDone += 1
-                    }
-                }
+            let dayData = store.checkins[ds] ?? [:]
+            totalTracked += ids.count
+            for id in ids {
+                if dayData[id] == 1 { totalDone += 1 }
             }
-            if !dayHasData { continue }
         }
         let rate = totalTracked > 0 ? Double(totalDone) / Double(totalTracked) * 100.0 : 0
         return (totalDone, totalTracked, rate)
     }
 
     func computeHabitStats() -> [HabitStat] {
-        let habits = store.activeHabits
-        var results: [HabitStat] = []
         let days = daysInMonth(year: year, month: month)
 
-        for habit in habits {
-            var done = 0, tracked = 0
-            for day in 1...days {
-                guard let d = makeDate(year: year, month: month, day: day) else { continue }
-                if isFuture(d) && !isToday(d) { continue }
-                let ds = formatDate(d)
-                if store.checkins[ds]?[habit.id] != nil {
-                    tracked += 1
-                    if store.checkinValue(habitId: habit.id, date: ds) == 1 {
-                        done += 1
-                    }
-                }
+        var habitTracked: [String: Int] = [:]
+        var habitDone: [String: Int] = [:]
+        for day in 1...days {
+            guard let d = makeDate(year: year, month: month, day: day) else { continue }
+            if isFuture(d) && !isToday(d) { continue }
+            let ids = store.trackedHabitIds(on: d)
+            guard !ids.isEmpty else { continue }
+            let ds = formatDate(d)
+            let dayData = store.checkins[ds] ?? [:]
+            for id in ids {
+                habitTracked[id, default: 0] += 1
+                if dayData[id] == 1 { habitDone[id, default: 0] += 1 }
             }
-            let rate = tracked > 0 ? Double(done) / Double(tracked) * 100.0 : 0
+        }
+
+        var results: [HabitStat] = []
+        for (habitId, tracked) in habitTracked {
+            guard tracked > 0 else { continue }
+            guard let habit = store.habits.first(where: { $0.id == habitId }) else { continue }
+            let done = habitDone[habitId] ?? 0
+            let rate = Double(done) / Double(tracked) * 100.0
             results.append(HabitStat(habit: habit, done: done, tracked: tracked, rate: rate))
         }
 
-        return results.sorted { $0.rate > $1.rate }
+        return results.sorted {
+            if $0.rate != $1.rate { return $0.rate > $1.rate }
+            return $0.habit.sortOrder < $1.habit.sortOrder
+        }
     }
 
     func computeWeeklyStats() -> [WeeklyStat] {
         let cal = Calendar.current
-        let habits = store.activeHabits
         let days = daysInMonth(year: year, month: month)
         guard let firstDay = makeDate(year: year, month: month, day: 1) else { return [] }
         guard let lastDay = makeDate(year: year, month: month, day: days) else { return [] }
@@ -361,14 +364,14 @@ struct MonthAnalyticsView: View {
             var d = rangeStart
             while d <= rangeEnd {
                 if !isFuture(d) || isToday(d) {
-                    let ds = formatDate(d)
-                    for habit in habits {
-                        if store.checkins[ds]?[habit.id] != nil {
-                            hasAnyData = true
-                            tracked += 1
-                            if store.checkinValue(habitId: habit.id, date: ds) == 1 {
-                                done += 1
-                            }
+                    let ids = store.trackedHabitIds(on: d)
+                    if !ids.isEmpty {
+                        hasAnyData = true
+                        let ds = formatDate(d)
+                        let dayData = store.checkins[ds] ?? [:]
+                        tracked += ids.count
+                        for id in ids {
+                            if dayData[id] == 1 { done += 1 }
                         }
                     }
                 }
@@ -382,6 +385,8 @@ struct MonthAnalyticsView: View {
                 results.append(WeeklyStat(
                     weekStart: ws,
                     weekEnd: we,
+                    displayStart: rangeStart,
+                    displayEnd: rangeEnd,
                     done: done,
                     tracked: tracked,
                     rate: rate
