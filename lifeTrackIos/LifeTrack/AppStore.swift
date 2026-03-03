@@ -2,14 +2,34 @@ import Foundation
 import SwiftUI
 import UserNotifications
 
+enum ThemeMode: String {
+    case auto
+    case light
+    case dark
+
+    var interfaceStyle: UIUserInterfaceStyle {
+        switch self {
+        case .auto:  return .unspecified
+        case .light: return .light
+        case .dark:  return .dark
+        }
+    }
+}
+
+enum AppLanguage: String {
+    case auto
+    case ru
+    case en
+}
+
 class AppStore: ObservableObject {
     @Published var habits: [Habit] = [] {
         didSet { _activeHabitIds = nil }
     }
     @Published var checkins: [String: [String: Int]] = [:]  // date -> habitId -> 0|1
     @Published var checkinExtras: [String: [String: CheckinExtra]] = [:]  // date -> habitId -> extra
-    @Published var themeMode: String = "auto"  // "auto" | "light" | "dark"
-    @Published var lang: String = "auto"       // "auto" | "ru" | "en"
+    @Published var themeMode: ThemeMode = .auto
+    @Published var lang: AppLanguage = .auto
     @Published var notifEnabled: Bool = false
     @Published var notifHour: Int = 21
     @Published var notifMinute: Int = 0
@@ -42,7 +62,7 @@ class AppStore: ObservableObject {
 
     private var undoStack: [Snapshot] = []
     private var redoStack: [Snapshot] = []
-    private let maxUndo = 5
+    private let maxUndo = AppConstants.maxUndoStack
 
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
@@ -81,13 +101,6 @@ class AppStore: ObservableObject {
 
     var activeHabits: [Habit] {
         habits.filter { !$0.isDeleted }.sorted { $0.sortOrder < $1.sortOrder }
-    }
-
-    var allHabits: [Habit] {
-        habits.sorted {
-            if $0.isDeleted != $1.isDeleted { return !$0.isDeleted }
-            return $0.sortOrder < $1.sortOrder
-        }
     }
 
     init() {
@@ -198,7 +211,8 @@ class AppStore: ObservableObject {
             } else {
                 break
             }
-            date = cal.date(byAdding: .day, value: -1, to: date)!
+            guard let prev = cal.date(byAdding: .day, value: -1, to: date) else { break }
+            date = prev
         }
         return streak
     }
@@ -291,7 +305,8 @@ class AppStore: ObservableObject {
             let ds = formatDate(d)
             guard let v = checkins[ds]?[habitId], v == 1 else { break }
             streak += 1
-            d = cal.date(byAdding: .day, value: -1, to: d)!
+            guard let prev = cal.date(byAdding: .day, value: -1, to: d) else { break }
+            d = prev
         }
         return streak
     }
@@ -337,7 +352,7 @@ class AppStore: ObservableObject {
         var count = 0
         var date = yesterday()
 
-        for _ in 0..<365 {
+        for _ in 0..<AppConstants.daysLookback {
             let ds = formatDate(date)
             let status = dayStatus(date: ds)
 
@@ -362,7 +377,7 @@ class AppStore: ObservableObject {
             var count = 0
             var date = yesterday()
 
-            for _ in 0..<365 {
+            for _ in 0..<AppConstants.daysLookback {
                 guard habitWasActive(habit, on: date) else { break }
 
                 let ds = formatDate(date)
@@ -426,7 +441,7 @@ class AppStore: ObservableObject {
         // Fallback: no habits were "active" on this date, but data exists.
         // This happens when user checked in via "yesterday" on the first day of usage
         // (habits created the next day). Include habits created within 1 day.
-        let nextDay = cal.date(byAdding: .day, value: 1, to: date)!
+        guard let nextDay = cal.date(byAdding: .day, value: 1, to: date) else { return dataIds }
         var fallbackIds = Set<String>()
         for habit in habits {
             if let deleted = habit.deletedAt,
@@ -476,6 +491,7 @@ class AppStore: ObservableObject {
     /// Compute per-habit stats for a given year, optionally scoped to a single month (0-indexed).
     func computeHabitStats(year: Int, month: Int? = nil) -> [HabitStat] {
         let monthRange: Range<Int> = month.map { $0..<($0 + 1) } ?? 0..<12
+        let habitById = Dictionary(uniqueKeysWithValues: habits.map { ($0.id, $0) })
 
         var habitTracked: [String: Int] = [:]
         var habitDone: [String: Int] = [:]
@@ -499,7 +515,7 @@ class AppStore: ObservableObject {
         var results: [HabitStat] = []
         for (habitId, tracked) in habitTracked {
             guard tracked > 0 else { continue }
-            guard let habit = habits.first(where: { $0.id == habitId }) else { continue }
+            guard let habit = habitById[habitId] else { continue }
             let done = habitDone[habitId] ?? 0
             let rate = Double(done) / Double(tracked) * 100.0
             results.append(HabitStat(habit: habit, done: done, tracked: tracked, rate: rate))
@@ -550,7 +566,7 @@ class AppStore: ObservableObject {
 
     // MARK: - Theme
 
-    func setTheme(_ mode: String) {
+    func setTheme(_ mode: ThemeMode) {
         themeMode = mode
         save()
         applyThemeToWindows()
@@ -559,13 +575,7 @@ class AppStore: ObservableObject {
     /// Applies the theme override directly to UIKit windows.
     /// This ensures sheets and other presented controllers follow the theme immediately.
     func applyThemeToWindows() {
-        let style: UIUserInterfaceStyle = {
-            switch themeMode {
-            case "light": return .light
-            case "dark":  return .dark
-            default:      return .unspecified
-            }
-        }()
+        let style = themeMode.interfaceStyle
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {
@@ -576,7 +586,7 @@ class AppStore: ObservableObject {
 
     // MARK: - Language
 
-    func setLanguage(_ value: String) {
+    func setLanguage(_ value: AppLanguage) {
         lang = value
         applyLanguage()
         save()
@@ -584,9 +594,9 @@ class AppStore: ObservableObject {
 
     private func applyLanguage() {
         switch lang {
-        case "ru": L10n.isRu = true
-        case "en": L10n.isRu = false
-        default:   L10n.isRu = Locale.current.language.languageCode?.identifier == "ru"
+        case .ru:   L10n.isRu = true
+        case .en:   L10n.isRu = false
+        case .auto: L10n.isRu = Locale.current.language.languageCode?.identifier == "ru"
         }
     }
 
@@ -624,7 +634,7 @@ class AppStore: ObservableObject {
         center.removeAllPendingNotificationRequests()
 
         let content = UNMutableNotificationContent()
-        content.title = "LifeTrack"
+        content.title = L10n.appTitle
         content.body = L10n.randomReminder()
         content.sound = .default
 
@@ -633,7 +643,7 @@ class AppStore: ObservableObject {
             repeats: true
         )
         let request = UNNotificationRequest(
-            identifier: "lt_daily",
+            identifier: AppConstants.notificationIdentifier,
             content: content,
             trigger: trigger
         )
@@ -751,8 +761,8 @@ class AppStore: ObservableObject {
         if let d = try? JSONEncoder().encode(checkinExtras) {
             UserDefaults.standard.set(d, forKey: extrasKey)
         }
-        UserDefaults.standard.set(themeMode, forKey: themeKey)
-        UserDefaults.standard.set(lang, forKey: langKey)
+        UserDefaults.standard.set(themeMode.rawValue, forKey: themeKey)
+        UserDefaults.standard.set(lang.rawValue, forKey: langKey)
         UserDefaults.standard.set(notifEnabled, forKey: notifEnabledKey)
         UserDefaults.standard.set(notifHour, forKey: notifHourKey)
         UserDefaults.standard.set(notifMinute, forKey: notifMinuteKey)
@@ -773,13 +783,17 @@ class AppStore: ObservableObject {
             checkinExtras = v
         }
         // Theme: migrate from legacy isDark bool
-        if let saved = UserDefaults.standard.string(forKey: themeKey) {
-            themeMode = saved
+        if let saved = UserDefaults.standard.string(forKey: themeKey),
+           let mode = ThemeMode(rawValue: saved) {
+            themeMode = mode
         } else if UserDefaults.standard.object(forKey: legacyThemeKey) != nil {
-            themeMode = UserDefaults.standard.bool(forKey: legacyThemeKey) ? "dark" : "light"
+            themeMode = UserDefaults.standard.bool(forKey: legacyThemeKey) ? .dark : .light
             UserDefaults.standard.removeObject(forKey: legacyThemeKey)
         }
-        lang = UserDefaults.standard.string(forKey: langKey) ?? "auto"
+        if let savedLang = UserDefaults.standard.string(forKey: langKey),
+           let parsedLang = AppLanguage(rawValue: savedLang) {
+            lang = parsedLang
+        }
         applyLanguage()
         // Notifications
         notifEnabled = UserDefaults.standard.bool(forKey: notifEnabledKey)

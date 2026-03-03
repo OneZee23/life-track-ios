@@ -14,8 +14,8 @@ struct CheckInView: View {
     @State private var showCelebration = false
     @State private var celebrationStreak = 0
     @State private var celebrationMessage = ""
-    @State private var hideWork: DispatchWorkItem?
-    @State private var confettiWork: DispatchWorkItem?
+    @State private var hideTask: Task<Void, Never>?
+    @State private var confettiTask: Task<Void, Never>?
 
     private var viewedDate: Date {
         selectedDay == .yesterday ? yesterday() : Date()
@@ -265,7 +265,7 @@ struct CheckInView: View {
     // MARK: - Streak
 
     private func habitStreak(for habit: Habit) -> Int {
-        let dayBefore = Calendar.current.date(byAdding: .day, value: -1, to: viewedDate)!
+        guard let dayBefore = Calendar.current.date(byAdding: .day, value: -1, to: viewedDate) else { return 0 }
         let baseStreak = store.habitStreak(habitId: habit.id, asOf: dayBefore)
         return isDone(habit.id) ? baseStreak + 1 : baseStreak
     }
@@ -288,9 +288,8 @@ struct CheckInView: View {
     }
 
     private func triggerCelebration() {
-        // Cancel any pending hide timers from previous celebration
-        hideWork?.cancel()
-        confettiWork?.cancel()
+        hideTask?.cancel()
+        confettiTask?.cancel()
 
         UINotificationFeedbackGenerator().notificationOccurred(.success)
 
@@ -304,27 +303,24 @@ struct CheckInView: View {
         celebrationStreak = todayAllDone ? baseStreak + 1 : baseStreak
         celebrationMessage = L10n.randomCongrats()
 
-        // Fresh start
         showConfetti = true
         withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
             showCelebration = true
         }
 
-        // Schedule smooth fade out
-        let hide = DispatchWorkItem { [self] in
+        hideTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 1.2)) {
                 showCelebration = false
             }
         }
-        hideWork = hide
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: hide)
 
-        // Schedule confetti cleanup
-        let confetti = DispatchWorkItem { [self] in
+        confettiTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard !Task.isCancelled else { return }
             showConfetti = false
         }
-        confettiWork = confetti
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: confetti)
     }
 }
 
@@ -363,7 +359,7 @@ private struct ExtendedCheckinPanel: View {
 
     private var numericPanel: some View {
         let minVal = config.minValue ?? 0
-        let maxVal = config.maxValue ?? 99999
+        let maxVal = config.maxValue ?? AppConstants.numericUnboundedMax
         let step = config.step ?? 1
         let current = value?.numericValue ?? minVal
         let unit = config.unit ?? ""
@@ -547,8 +543,8 @@ private struct ExtendedCheckinPanel: View {
                     localText = value?.textValue ?? ""
                 }
                 .onChange(of: localText) { newValue in
-                    if newValue.count > 140 {
-                        localText = String(newValue.prefix(140))
+                    if newValue.count > AppConstants.textCharLimit {
+                        localText = String(newValue.prefix(AppConstants.textCharLimit))
                         return
                     }
                     var extra = value ?? CheckinExtra()
@@ -562,17 +558,10 @@ private struct ExtendedCheckinPanel: View {
                     }
                 }
 
-            Text("\(localText.count)/140")
+            Text("\(localText.count)/\(AppConstants.textCharLimit)")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
         }
     }
 
-    // MARK: - Helpers
-
-    private func formatValue(_ value: Double) -> String {
-        value.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", value)
-            : String(format: "%.1f", value)
-    }
 }

@@ -52,6 +52,7 @@ struct ExtendedFieldConfig: Codable, Equatable, Hashable {
         self.inputStyle = inputStyle
     }
 
+    // Required: Swift does not synthesize CodingKeys when init(from:) is custom
     enum CodingKeys: String, CodingKey {
         case type, unit, minValue, maxValue, step, inputStyle
     }
@@ -78,6 +79,7 @@ struct CheckinExtra: Codable, Equatable {
         self.ratingValue = ratingValue
     }
 
+    // Required: Swift does not synthesize CodingKeys when init(from:) is custom
     enum CodingKeys: String, CodingKey {
         case numericValue, textValue, ratingValue
     }
@@ -121,6 +123,7 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         self.extendedField = extendedField
     }
 
+    // Required: Swift does not synthesize CodingKeys when init(from:) is custom
     enum CodingKeys: String, CodingKey {
         case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField
     }

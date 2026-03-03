@@ -6,6 +6,10 @@ enum L10n {
         Locale.current.language.languageCode?.identifier == "ru"
     }()
 
+    // MARK: - App
+
+    static var appTitle: String { "LifeTrack" }
+
     // MARK: - Tabs
 
     static var tabCheckIn:  String { isRu ? "Чек-ин"   : "Check-in" }
@@ -33,7 +37,7 @@ enum L10n {
     static var delete:    String { isRu ? "Удалить"             : "Delete" }
 
     static func habitsCount(_ n: Int) -> String {
-        isRu ? "\(n) из 10" : "\(n) of 10"
+        isRu ? "\(n) из \(AppConstants.maxHabits)" : "\(n) of \(AppConstants.maxHabits)"
     }
 
     // MARK: - Settings
@@ -145,7 +149,7 @@ enum L10n {
         let options: [String] = isRu
             ? ["🎉 Все выполнено!", "💪 Отличная работа!", "⭐ Так держать!", "🏆 Молодец!", "✨ День закрыт!"]
             : ["🎉 All done!", "💪 Great work!", "⭐ Keep it up!", "🏆 Well done!", "✨ Day complete!"]
-        return options.randomElement()!
+        return options.randomElement() ?? options[0]
     }
 
     // MARK: - Date arrays
@@ -238,7 +242,7 @@ enum L10n {
                "5 seconds — and your day is logged",
                "Check in and track your progress",
                "Time to visit LifeTrack"]
-        return options.randomElement()!
+        return options.randomElement() ?? options[0]
     }
 
     // MARK: - Daily greeting

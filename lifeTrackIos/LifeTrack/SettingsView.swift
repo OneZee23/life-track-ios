@@ -7,9 +7,9 @@ struct SettingsView: View {
 
     private var resolvedIsDark: Bool {
         switch store.themeMode {
-        case "light": return false
-        case "dark":  return true
-        default:      return colorScheme == .dark
+        case .light: return false
+        case .dark:  return true
+        case .auto:  return colorScheme == .dark
         }
     }
 
@@ -20,18 +20,18 @@ struct SettingsView: View {
                 Section {
                     DayNightSceneView(isDark: resolvedIsDark)
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    themeRow(value: "auto", label: L10n.themeAuto, icon: "circle.lefthalf.filled")
-                    themeRow(value: "light", label: L10n.themeLight, icon: "sun.max.fill", iconColor: .orange)
-                    themeRow(value: "dark", label: L10n.themeDark, icon: "moon.fill", iconColor: .indigo)
+                    themeRow(value: .auto, label: L10n.themeAuto, icon: "circle.lefthalf.filled")
+                    themeRow(value: .light, label: L10n.themeLight, icon: "sun.max.fill", iconColor: .orange)
+                    themeRow(value: .dark, label: L10n.themeDark, icon: "moon.fill", iconColor: .indigo)
                 } header: {
                     Text(L10n.appearance)
                 }
 
                 // Language
                 Section {
-                    languageRow(value: "auto", label: L10n.languageAuto, icon: "globe")
-                    languageRow(value: "ru", label: "Русский", icon: "🇷🇺")
-                    languageRow(value: "en", label: "English", icon: "🇬🇧")
+                    languageRow(value: .auto, label: L10n.languageAuto, icon: "globe")
+                    languageRow(value: .ru, label: "Русский", icon: "🇷🇺")
+                    languageRow(value: .en, label: "English", icon: "🇬🇧")
                 } header: {
                     Text(L10n.language)
                 }
@@ -192,7 +192,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    func themeRow(value: String, label: String, icon: String, iconColor: Color = .secondary) -> some View {
+    func themeRow(value: ThemeMode, label: String, icon: String, iconColor: Color = .secondary) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.4)) {
                 store.setTheme(value)
@@ -217,7 +217,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    func languageRow(value: String, label: String, icon: String) -> some View {
+    func languageRow(value: AppLanguage, label: String, icon: String) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 store.setLanguage(value)

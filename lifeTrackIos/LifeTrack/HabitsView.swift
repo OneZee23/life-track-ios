@@ -74,7 +74,7 @@ struct HabitsView: View {
                 .environment(\.editMode, .constant(.active))
 
                 // Add button
-                if store.activeHabits.count < 10 && !showAddForm {
+                if store.activeHabits.count < AppConstants.maxHabits && !showAddForm {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             showAddForm = true
@@ -97,7 +97,7 @@ struct HabitsView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 20)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if store.activeHabits.count >= 10 {
+                } else if store.activeHabits.count >= AppConstants.maxHabits {
                     Text(L10n.maxHabits)
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
@@ -299,7 +299,7 @@ struct HabitFormView: View {
                                     .focused($nameFocused)
                                     .onSubmit { if canSave { save() } }
 
-                                Text("\(name.count)/20")
+                                Text("\(name.count)/\(AppConstants.habitNameMaxLength)")
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                                     .padding(.trailing, 14)
@@ -473,7 +473,7 @@ struct HabitFormView: View {
                     .foregroundColor(.primary)
                 TextField(L10n.extendedUnitHint, text: Binding(
                     get: { numericUnit },
-                    set: { numericUnit = String($0.prefix(6)) }
+                    set: { numericUnit = String($0.prefix(AppConstants.unitMaxLength)) }
                 ))
                 .font(.system(size: 15))
                 .multilineTextAlignment(.trailing)
@@ -489,7 +489,7 @@ struct HabitFormView: View {
             numericFieldRow(
                 label: L10n.extendedMin,
                 value: $numericMin,
-                range: 0...max(0, hasMax ? numericMax - numericStep : 99998)
+                range: 0...max(0, hasMax ? numericMax - numericStep : AppConstants.numericUnboundedMax - 1)
             )
 
             // Max (optional)
@@ -508,7 +508,7 @@ struct HabitFormView: View {
                                 numericMax = numericMin + s
                             }
                         } label: {
-                            Text(formatNumericValue(s))
+                            Text(formatValue(s))
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(numericStep == s ? .white : .primary)
                                 .frame(maxWidth: .infinity)
@@ -549,21 +549,21 @@ struct HabitFormView: View {
                     }
                     .disabled(numericMax <= numericMin + numericStep)
 
-                    Text(formatNumericValue(numericMax))
+                    Text(formatValue(numericMax))
                         .font(.system(size: 15, weight: .bold, design: .monospaced))
                         .foregroundColor(.primary)
                         .frame(minWidth: 32)
 
                     Button {
-                        numericMax = min(99999, numericMax + numericStep)
+                        numericMax = min(AppConstants.numericUnboundedMax, numericMax + numericStep)
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(numericMax >= 99999 ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
+                            .foregroundColor(numericMax >= AppConstants.numericUnboundedMax ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
                             .frame(width: 28, height: 28)
                             .background(Circle().fill(Color(UIColor.systemGray5)))
                     }
-                    .disabled(numericMax >= 99999)
+                    .disabled(numericMax >= AppConstants.numericUnboundedMax)
 
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -632,7 +632,7 @@ struct HabitFormView: View {
             }
             .disabled(value.wrappedValue <= range.lowerBound)
 
-            Text(formatNumericValue(value.wrappedValue))
+            Text(formatValue(value.wrappedValue))
                 .font(.system(size: 15, weight: .bold, design: .monospaced))
                 .foregroundColor(.primary)
                 .frame(minWidth: 32)
@@ -657,11 +657,6 @@ struct HabitFormView: View {
         )
     }
 
-    private func formatNumericValue(_ value: Double) -> String {
-        value.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", value)
-            : String(format: "%.1f", value)
-    }
 
     // MARK: - Live Preview
 
@@ -733,7 +728,7 @@ struct HabitFormView: View {
     // MARK: - Preview Panels
 
     private var effectiveMax: Double {
-        hasMax ? numericMax : 99999
+        hasMax ? numericMax : AppConstants.numericUnboundedMax
     }
 
     private var safeStep: Double {
@@ -753,7 +748,7 @@ struct HabitFormView: View {
                     .tint(Color(UIColor.systemGreen))
 
                     HStack(spacing: 2) {
-                        Text(formatNumericValue(previewNumeric))
+                        Text(formatValue(previewNumeric))
                         if !numericUnit.isEmpty { Text(numericUnit) }
                     }
                     .font(.system(size: 14, weight: .semibold, design: .monospaced))
@@ -790,7 +785,7 @@ struct HabitFormView: View {
                                 }
                         } else {
                             HStack(spacing: 2) {
-                                Text(formatNumericValue(previewNumeric))
+                                Text(formatValue(previewNumeric))
                                     .font(.system(size: 17, weight: .bold, design: .monospaced))
                                     .foregroundColor(.primary)
                                 if !numericUnit.isEmpty {
@@ -801,7 +796,7 @@ struct HabitFormView: View {
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                editPreviewValueText = formatNumericValue(previewNumeric)
+                                editPreviewValueText = formatValue(previewNumeric)
                                 isEditingPreviewValue = true
                             }
                         }
@@ -881,12 +876,12 @@ struct HabitFormView: View {
                 .font(.system(size: 15))
                 .foregroundColor(.primary)
                 .onChange(of: previewText) { newValue in
-                    if newValue.count > 140 {
-                        previewText = String(newValue.prefix(140))
+                    if newValue.count > AppConstants.textCharLimit {
+                        previewText = String(newValue.prefix(AppConstants.textCharLimit))
                     }
                 }
 
-            Text("\(previewText.count)/140")
+            Text("\(previewText.count)/\(AppConstants.textCharLimit)")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
         }
@@ -898,7 +893,7 @@ struct HabitFormView: View {
 
     private func save() {
         guard canSave else { return }
-        let trimmedName = String(name.trimmingCharacters(in: .whitespaces).prefix(20))
+        let trimmedName = String(name.trimmingCharacters(in: .whitespaces).prefix(AppConstants.habitNameMaxLength))
 
         var config: ExtendedFieldConfig?
         if extendedEnabled {
