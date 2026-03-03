@@ -181,25 +181,53 @@ struct DayProgressView: View {
         )
     }
 
+    private func formatNumeric(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", value)
+            : String(format: "%.1f", value)
+    }
+
     private func extraLabel(extra: CheckinExtra, config: ExtendedFieldConfig?) -> some View {
         Group {
             if let numVal = extra.numericValue {
-                let unit = config?.unit ?? ""
-                let formatted = numVal.truncatingRemainder(dividingBy: 1) == 0
-                    ? String(format: "%.0f", numVal)
-                    : String(format: "%.1f", numVal)
-                Text("\(formatted) \(unit)")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    Image(systemName: "number")
+                        .font(.system(size: 10, weight: .bold))
+                    Text("\(formatNumeric(numVal)) \(config?.unit ?? "")")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundColor(Color(UIColor.systemGreen))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color(UIColor.systemGreen).opacity(0.12))
+                )
             } else if let rating = extra.ratingValue {
-                Text("\(rating)/10")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 10))
+                    Text("\(rating)/10")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundColor(.orange)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color.orange.opacity(0.12))
+                )
             } else if let text = extra.textValue, !text.isEmpty {
-                Text("«\(text)»")
+                Text(text)
                     .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                    .foregroundColor(.primary.opacity(0.7))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(UIColor.systemGray6))
+                    )
             }
         }
     }

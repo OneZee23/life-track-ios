@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var store: AppStore
     @Environment(\.scenePhase) var scenePhase
-    @State private var selectedTab = 1
+    @State private var selectedTab = 0
     @State private var progressResetID = UUID()
     @State private var showGreeting = false
     @State private var showOnboarding = false

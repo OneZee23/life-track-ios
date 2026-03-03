@@ -26,6 +26,11 @@ class AppStore: ObservableObject {
     private let greetingDateKey = "lt_greeting_shown_date"
     private let onboardingKey = "lt_onboarding_completed"
     private let extrasKey = "lt_checkin_extras_v1"
+    private let schemaVersionKey = "lt_schema_version"
+    private let backupPrefix = "lt_backup_"
+
+    /// Increment when adding migrations.
+    private static let currentSchemaVersion = 1
 
     // MARK: - Undo/Redo
 
@@ -86,8 +91,11 @@ class AppStore: ObservableObject {
     }
 
     init() {
+        migrateIfNeeded()
         load()
-        if habits.isEmpty { seedDefaults() }
+        if habits.isEmpty && !hasExistingCheckinData() {
+            seedDefaults()
+        }
         if notifEnabled { scheduleDaily() }
     }
 
@@ -632,6 +640,105 @@ class AppStore: ObservableObject {
         center.add(request, withCompletionHandler: nil)
     }
 
+    // MARK: - Schema Migration
+
+    private func migrateIfNeeded() {
+        let stored = UserDefaults.standard.integer(forKey: schemaVersionKey)
+        guard stored < Self.currentSchemaVersion else { return }
+
+        backupCurrentData(version: stored)
+
+        if stored < 1 {
+            migrateV0toV1()
+        }
+        // Future: if stored < 2 { migrateV1toV2() }
+
+        UserDefaults.standard.set(Self.currentSchemaVersion, forKey: schemaVersionKey)
+    }
+
+    /// Backup raw data blobs before migration (byte-copy, no decoding).
+    private func backupCurrentData(version: Int) {
+        let ud = UserDefaults.standard
+        let ts = Int(Date().timeIntervalSince1970)
+        for key in [habitsKey, checkinsKey, extrasKey] {
+            if let data = ud.data(forKey: key) {
+                ud.set(data, forKey: "\(backupPrefix)\(key)_v\(version)_\(ts)")
+            }
+        }
+    }
+
+    /// Attempt to recover orphaned checkin data for users who already lost habits
+    /// due to Codable decode failure + seedDefaults overwrite.
+    private func migrateV0toV1() {
+        let ud = UserDefaults.standard
+        guard let habitsData = ud.data(forKey: habitsKey),
+              let checkinsData = ud.data(forKey: checkinsKey) else { return }
+
+        let currentHabits = [Habit].safeDecoded(from: habitsData)
+        guard let allCheckins = try? JSONDecoder().decode(
+            [String: [String: Int]].self, from: checkinsData
+        ) else { return }
+
+        // Find habit IDs referenced in checkins but missing from current habits
+        let checkinIds = Set(allCheckins.values.flatMap(\.keys))
+        let habitIds = Set(currentHabits.map(\.id))
+        let orphaned = checkinIds.subtracting(habitIds)
+
+        // Only attempt remap if:
+        // - there ARE orphaned IDs
+        // - current habits look like fresh seeds (created <60 sec ago)
+        // - orphan count matches habit count (clean seed-over-old-data scenario)
+        guard !orphaned.isEmpty,
+              currentHabits.allSatisfy({ $0.createdAt.timeIntervalSinceNow > -60 }),
+              orphaned.count == currentHabits.count else { return }
+
+        let oldSorted = orphaned.sorted()
+        let newSorted = currentHabits.sorted { $0.sortOrder < $1.sortOrder }
+
+        var remap: [String: String] = [:]
+        for (old, new) in zip(oldSorted, newSorted) {
+            remap[old] = new.id
+        }
+
+        // Remap checkins
+        var remapped: [String: [String: Int]] = [:]
+        for (date, day) in allCheckins {
+            var newDay: [String: Int] = [:]
+            for (hid, val) in day {
+                newDay[remap[hid] ?? hid] = val
+            }
+            remapped[date] = newDay
+        }
+        if let enc = try? JSONEncoder().encode(remapped) {
+            ud.set(enc, forKey: checkinsKey)
+        }
+
+        // Remap extras
+        if let extData = ud.data(forKey: extrasKey),
+           let extras = try? JSONDecoder().decode([String: [String: CheckinExtra]].self, from: extData) {
+            var remappedExtras: [String: [String: CheckinExtra]] = [:]
+            for (date, day) in extras {
+                var newDay: [String: CheckinExtra] = [:]
+                for (hid, extra) in day {
+                    newDay[remap[hid] ?? hid] = extra
+                }
+                remappedExtras[date] = newDay
+            }
+            if let enc = try? JSONEncoder().encode(remappedExtras) {
+                ud.set(enc, forKey: extrasKey)
+            }
+        }
+
+        // Update createdAt to distantPast (these habits inherited real user data)
+        var updated = currentHabits
+        for i in updated.indices {
+            updated[i].createdAt = .distantPast
+        }
+        if let enc = try? JSONEncoder().encode(updated) {
+            ud.set(enc, forKey: habitsKey)
+        }
+    }
+
     // MARK: - Persistence
 
     private func save() {
@@ -652,9 +759,10 @@ class AppStore: ObservableObject {
     }
 
     private func load() {
-        if let d = UserDefaults.standard.data(forKey: habitsKey),
-           let v = try? JSONDecoder().decode([Habit].self, from: d) {
-            habits = v
+        // Safe array decoding: one corrupt habit doesn't nuke the rest
+        if let d = UserDefaults.standard.data(forKey: habitsKey) {
+            let decoded = [Habit].safeDecoded(from: d)
+            if !decoded.isEmpty { habits = decoded }
         }
         if let d = UserDefaults.standard.data(forKey: checkinsKey),
            let v = try? JSONDecoder().decode([String: [String: Int]].self, from: d) {
@@ -682,6 +790,14 @@ class AppStore: ObservableObject {
             notifMinute = UserDefaults.standard.integer(forKey: notifMinuteKey)
         }
         onboardingCompleted = UserDefaults.standard.bool(forKey: onboardingKey)
+    }
+
+    /// Returns true if checkin data exists in UserDefaults, even if habits failed to decode.
+    private func hasExistingCheckinData() -> Bool {
+        guard let d = UserDefaults.standard.data(forKey: checkinsKey),
+              let v = try? JSONDecoder().decode([String: [String: Int]].self, from: d)
+        else { return false }
+        return !v.isEmpty
     }
 
     private func seedDefaults() {
