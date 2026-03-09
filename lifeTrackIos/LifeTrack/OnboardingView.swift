@@ -7,6 +7,7 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var dragOffset: CGFloat = 0
 
+    @State private var gestureReady = false
     @State private var page1Appeared = false
     @State private var pageWhyAppeared = false
     @State private var page2Appeared = false
@@ -47,6 +48,7 @@ struct OnboardingView: View {
                         progressPage.frame(width: geo.size.width)
                     }
                     .offset(x: -CGFloat(currentPage) * geo.size.width + dragOffset)
+                    .allowsHitTesting(gestureReady)
                     .gesture(
                         DragGesture()
                             .onChanged { value in
@@ -112,16 +114,22 @@ struct OnboardingView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
             .frame(maxHeight: .infinity, alignment: .bottom)
-            .gesture(
-                DragGesture()
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 30)
                     .onEnded { value in
-                        if value.translation.height > 100 { dismiss() }
+                        if value.translation.height > 100 &&
+                           abs(value.translation.height) > abs(value.translation.width) {
+                            dismiss()
+                        }
                     }
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         .onAppear {
             page1Appeared = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                gestureReady = true
+            }
         }
     }
 

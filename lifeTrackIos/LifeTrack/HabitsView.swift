@@ -10,7 +10,6 @@ struct HabitsView: View {
 
     @State private var showAddForm = false
     @State private var editingHabit: Habit? = nil
-    @State private var habitToDelete: Habit? = nil
 
     var body: some View {
         ZStack {
@@ -61,8 +60,7 @@ struct HabitsView: View {
                     ForEach(store.activeHabits) { habit in
                         HabitRow(
                             habit: habit,
-                            onEdit: { editingHabit = habit },
-                            onDelete: { habitToDelete = habit }
+                            onEdit: { editingHabit = habit }
                         )
                         .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
@@ -114,31 +112,15 @@ struct HabitsView: View {
             }
         }
         .sheet(item: $editingHabit) { habit in
-            HabitFormView(mode: .edit(habit)) { name, emoji, ext in
+            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext in
                 store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext)
                 editingHabit = nil
-            } onCancel: {
+            }, onCancel: {
                 editingHabit = nil
-            }
-        }
-        .confirmationDialog(
-            L10n.deleteConfirmTitle,
-            isPresented: Binding(
-                get: { habitToDelete != nil },
-                set: { if !$0 { habitToDelete = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button(L10n.delete, role: .destructive) {
-                if let habit = habitToDelete {
-                    withAnimation { store.deleteHabit(id: habit.id) }
-                }
-                habitToDelete = nil
-            }
-        } message: {
-            if let habit = habitToDelete {
-                Text(L10n.deleteConfirmMessage(habit.emoji, habit.name))
-            }
+            }, onDelete: {
+                withAnimation { store.deleteHabit(id: habit.id) }
+                editingHabit = nil
+            })
         }
     }
 
@@ -167,7 +149,6 @@ struct HabitsView: View {
 struct HabitRow: View {
     let habit: Habit
     let onEdit: () -> Void
-    let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -187,11 +168,6 @@ struct HabitRow: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture { onEdit() }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive, action: onDelete) {
-                Label(L10n.delete, systemImage: "trash")
-            }
-        }
     }
 }
 
@@ -206,7 +182,9 @@ struct HabitFormView: View {
     let mode: HabitFormMode
     let onSave: (String, String, ExtendedFieldConfig?) -> Void
     let onCancel: () -> Void
+    var onDelete: (() -> Void)? = nil
 
+    @State private var showDeleteConfirm = false
     @State private var name: String = ""
     @State private var emoji: String = "🎯"
     @State private var showEmojiPicker = false
@@ -238,10 +216,11 @@ struct HabitFormView: View {
         }
     }
 
-    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?) -> Void, onCancel: @escaping () -> Void) {
+    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
         self.mode = mode
         self.onSave = onSave
         self.onCancel = onCancel
+        self.onDelete = onDelete
         if case .edit(let habit) = mode {
             _name = State(initialValue: habit.name)
             _emoji = State(initialValue: habit.emoji)
@@ -369,6 +348,25 @@ struct HabitFormView: View {
                             }
                             .disabled(!canSave)
                         }
+
+                        // Delete button (edit mode only)
+                        if onDelete != nil {
+                            Button { showDeleteConfirm = true } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 14, weight: .semibold))
+                                    Text(L10n.deleteConfirmTitle)
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.red)
+                                )
+                            }
+                        }
                     }
                     .padding(16)
                 }
@@ -390,6 +388,19 @@ struct HabitFormView: View {
             }
         }
         .onAppear { nameFocused = true }
+        .confirmationDialog(
+            L10n.deleteConfirmTitle,
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.delete, role: .destructive) {
+                onDelete?()
+            }
+        } message: {
+            if case .edit(let habit) = mode {
+                Text(L10n.deleteConfirmMessage(habit.emoji, habit.name))
+            }
+        }
     }
 
     // MARK: - Extended Field Section

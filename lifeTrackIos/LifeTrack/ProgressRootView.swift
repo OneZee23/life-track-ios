@@ -199,13 +199,13 @@ struct ProgressRootView: View {
                             }
                         }
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold))
                             Text(backLabel)
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.system(size: 15, weight: .medium))
                         }
-                        .foregroundColor(Color(UIColor.systemBlue))
+                        .foregroundColor(.secondary)
                     }
                     Spacer()
                 }

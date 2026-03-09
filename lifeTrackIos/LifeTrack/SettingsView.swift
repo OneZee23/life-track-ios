@@ -132,7 +132,7 @@ struct SettingsView: View {
                         iconColor: .blue,
                         title: L10n.writeAuthor,
                         subtitle: L10n.bugsIdeas,
-                        url: "https://t.me/onezee"
+                        url: "https://t.me/onezee123"
                     )
                 } header: {
                     Text(L10n.feedback)
@@ -145,7 +145,7 @@ struct SettingsView: View {
                         iconColor: .blue,
                         title: L10n.telegramChannel,
                         subtitle: L10n.telegramSubtitle,
-                        url: "https://t.me/onezee"
+                        url: "https://t.me/onezee_co"
                     )
                     linkRow(
                         icon: "play.rectangle.fill",

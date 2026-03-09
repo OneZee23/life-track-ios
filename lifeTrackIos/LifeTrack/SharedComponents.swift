@@ -11,14 +11,14 @@ struct NavArrowButton: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             action()
         } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.systemGray5))
-                    .frame(width: 32, height: 32)
-                Image(systemName: left ? "chevron.left" : "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
+            Image(systemName: left ? "chevron.left" : "chevron.right")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.primary)
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .fill(Color(UIColor.systemGray5))
+                )
         }
     }
 }
