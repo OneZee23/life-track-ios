@@ -26,9 +26,35 @@ struct HabitToggleCard: View {
 
                 // Name + streak
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(habit.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
+                    HStack(spacing: 5) {
+                        Text(habit.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        if habit.isNew {
+                            Text(L10n.newBadge)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(Color(UIColor.systemOrange))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(Color(UIColor.systemOrange).opacity(0.12))
+                                )
+                        }
+
+                        if habit.healthKitWorkoutType != nil {
+                            Text(L10n.healthKitAutoLabel)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(Color(UIColor.systemGreen))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(Color(UIColor.systemGreen).opacity(0.12))
+                                )
+                        }
+                    }
 
                     if streak >= 2 {
                         HStack(spacing: 3) {

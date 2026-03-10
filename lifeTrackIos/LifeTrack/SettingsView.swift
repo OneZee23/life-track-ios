@@ -161,6 +161,13 @@ struct SettingsView: View {
                         subtitle: L10n.githubSubtitle,
                         url: "https://github.com/OneZee23/life-track-ios"
                     )
+                    linkRow(
+                        icon: "hand.raised.fill",
+                        iconColor: Color(UIColor.systemGray2),
+                        title: L10n.privacyPolicy,
+                        subtitle: "",
+                        url: "https://onezee23.github.io/life-track-ios/privacy-policy.html"
+                    )
                 } header: {
                     Text(L10n.links)
                 }
@@ -266,9 +273,11 @@ struct SettingsView: View {
                     Text(title)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.primary)
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 Spacer()

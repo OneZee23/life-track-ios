@@ -29,9 +29,11 @@
 		AA00000000000000000000DA /* DailyGreetingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D9 /* DailyGreetingView.swift */; };
 		AA00000000000000000000DC /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DB /* SharedComponents.swift */; };
 		AA00000000000000000000DE /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DD /* OnboardingView.swift */; };
+		AA00000000000000000000E0 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DF /* HealthKitService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7BE942842F604BA5005C1CFA /* LifeTrackDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LifeTrackDebug.entitlements; sourceTree = "<group>"; };
 		AA00000000000000000000A1 /* LifeTrackApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeTrackApp.swift; sourceTree = "<group>"; };
 		AA00000000000000000000A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000A3 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -56,6 +58,7 @@
 		AA00000000000000000000D9 /* DailyGreetingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyGreetingView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000DB /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		AA00000000000000000000DD /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		AA00000000000000000000DF /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +91,7 @@
 		AA00000000000000000000C4 /* LifeTrack */ = {
 			isa = PBXGroup;
 			children = (
+				7BE942842F604BA5005C1CFA /* LifeTrackDebug.entitlements */,
 				AA00000000000000000000A1 /* LifeTrackApp.swift */,
 				AA00000000000000000000A2 /* ContentView.swift */,
 				AA00000000000000000000A3 /* Models.swift */,
@@ -109,6 +113,7 @@
 				AA00000000000000000000D9 /* DailyGreetingView.swift */,
 				AA00000000000000000000DB /* SharedComponents.swift */,
 				AA00000000000000000000DD /* OnboardingView.swift */,
+				AA00000000000000000000DF /* HealthKitService.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -151,7 +156,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					AA00000000000000000000C9 = {
 						CreatedOnToolsVersion = 15.4;
@@ -213,6 +218,7 @@
 				AA00000000000000000000DA /* DailyGreetingView.swift in Sources */,
 				AA00000000000000000000DC /* SharedComponents.swift in Sources */,
 				AA00000000000000000000DE /* OnboardingView.swift in Sources */,
+				AA00000000000000000000E0 /* HealthKitService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,6 +248,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLES = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
@@ -253,6 +260,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -303,6 +311,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLES = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
@@ -314,6 +323,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -340,22 +350,25 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LifeTrack/LifeTrackDebug.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeTrack reads your workouts to automatically check in exercise habits";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.2;
-				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack;
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -369,18 +382,18 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = J52AX8YA9Y;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeTrack reads your workouts to automatically check in exercise habits";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.2;
+				MARKETING_VERSION = 0.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

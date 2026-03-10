@@ -17,55 +17,53 @@ struct CheckInView: View {
     @State private var hideTask: Task<Void, Never>?
     @State private var confettiTask: Task<Void, Never>?
 
-    private var viewedDate: Date {
-        selectedDay == .yesterday ? yesterday() : Date()
-    }
-
     private var dateStr: String {
-        formatDate(viewedDate)
-    }
-
-    private var doneCount: Int {
-        store.activeHabits.filter {
-            store.checkinValue(habitId: $0.id, date: dateStr) == 1
-        }.count
+        let date = selectedDay == .yesterday ? yesterday() : Date()
+        return formatDate(date)
     }
 
     private var total: Int { store.activeHabits.count }
-
-    private func isDone(_ habitId: String) -> Bool {
-        store.checkinValue(habitId: habitId, date: dateStr) == 1
-    }
 
     var body: some View {
         ZStack(alignment: .top) {
             Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    checkInContent
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 40)
-            }
-
-            // Fixed gear button — always pinned top-right
-            HStack {
-                Spacer()
-                Button { showSettings = true } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(UIColor.systemGray5))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.secondary)
+            VStack(spacing: 0) {
+                // Header
+                HStack(alignment: .top) {
+                    Text(L10n.checkIn)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Button { showSettings = true } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color(UIColor.systemGray5))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
+                .padding(.top, 16)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+
+                // Day selector
+                daySelectorView
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+
+                // Swipeable habit pages
+                TabView(selection: $selectedDay) {
+                    habitPage(for: .yesterday).tag(SelectedDay.yesterday)
+                    habitPage(for: .today).tag(SelectedDay.today)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.25), value: selectedDay)
             }
-            .padding(.top, 16)
-            .padding(.horizontal, 16)
 
             // Celebration overlay — blocks all touches behind it
             if showCelebration {
@@ -113,85 +111,82 @@ struct CheckInView: View {
         }
     }
 
-    // MARK: - Check-in form
+    // MARK: - Habit Page (swipeable)
 
-    var checkInContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L10n.checkIn)
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.primary)
-                }
-                Spacer()
-                Color.clear.frame(width: 36, height: 36)
-            }
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+    private func habitPage(for day: SelectedDay) -> some View {
+        let date = day == .yesterday ? yesterday() : Date()
+        let ds = formatDate(date)
+        let habits = store.activeHabits
+        let done = habits.filter { store.checkinValue(habitId: $0.id, date: ds) == 1 }.count
+        let tot = habits.count
 
-            // Day selector
-            daySelectorView
-                .padding(.bottom, 20)
-
-            // Habit cards
-            VStack(spacing: 8) {
-                ForEach(store.activeHabits) { habit in
-                    VStack(spacing: 2) {
-                        HabitToggleCard(
-                            habit: habit,
-                            isDone: isDone(habit.id),
-                            streak: habitStreak(for: habit),
-                            onToggle: { toggle(habitId: habit.id) }
-                        )
-
-                        if isDone(habit.id) && habit.extendedField != nil {
-                            ExtendedCheckinPanel(
-                                config: habit.extendedField!,
-                                value: store.getExtra(habitId: habit.id, date: dateStr),
-                                onChange: { extra in
-                                    store.setExtra(habitId: habit.id, date: dateStr, extra: extra)
-                                }
+        return ScrollView {
+            VStack(spacing: 0) {
+                // Habit cards
+                VStack(spacing: 8) {
+                    ForEach(habits) { habit in
+                        let habitDone = store.checkinValue(habitId: habit.id, date: ds) == 1
+                        VStack(spacing: 2) {
+                            HabitToggleCard(
+                                habit: habit,
+                                isDone: habitDone,
+                                streak: streakForHabit(habit, date: date, isDone: habitDone),
+                                onToggle: { toggle(habitId: habit.id) }
                             )
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+
+                            if habitDone && habit.extendedField != nil {
+                                ExtendedCheckinPanel(
+                                    config: habit.extendedField!,
+                                    value: store.getExtra(habitId: habit.id, date: ds),
+                                    onChange: { extra in
+                                        store.setExtra(habitId: habit.id, date: ds, extra: extra)
+                                    }
+                                )
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                        }
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: habitDone)
+                    }
+                }
+
+                // Progress bar
+                HStack(spacing: 10) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color(UIColor.systemGray5))
+                                .frame(height: 4)
+                            Capsule()
+                                .fill(Color(UIColor.systemGreen))
+                                .frame(
+                                    width: tot > 0
+                                        ? geo.size.width * CGFloat(done) / CGFloat(tot)
+                                        : 0,
+                                    height: 4
+                                )
+                                .animation(.easeInOut(duration: 0.4), value: done)
                         }
                     }
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .bottom).combined(with: .opacity),
-                        removal: .opacity
-                    ))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDone(habit.id))
-                }
-            }
+                    .frame(height: 4)
 
-            // Progress bar
-            HStack(spacing: 10) {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color(UIColor.systemGray5))
-                            .frame(height: 4)
-                        Capsule()
-                            .fill(Color(UIColor.systemGreen))
-                            .frame(
-                                width: total > 0
-                                    ? geo.size.width * CGFloat(doneCount) / CGFloat(total)
-                                    : 0,
-                                height: 4
-                            )
-                            .animation(.easeInOut(duration: 0.4), value: doneCount)
-                    }
+                    Text("\(done)/\(tot)")
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundColor(done == tot && tot > 0
+                                         ? Color(UIColor.systemGreen)
+                                         : .secondary)
+                        .frame(minWidth: 32, alignment: .trailing)
                 }
-                .frame(height: 4)
-
-                Text("\(doneCount)/\(total)")
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundColor(doneCount == total && total > 0
-                                     ? Color(UIColor.systemGreen)
-                                     : .secondary)
-                    .frame(minWidth: 32, alignment: .trailing)
+                .padding(.vertical, 16)
             }
-            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 40)
+        }
+        .refreshable {
+            await store.syncHealthKitWorkouts()
         }
     }
 
@@ -264,10 +259,10 @@ struct CheckInView: View {
 
     // MARK: - Streak
 
-    private func habitStreak(for habit: Habit) -> Int {
-        guard let dayBefore = Calendar.current.date(byAdding: .day, value: -1, to: viewedDate) else { return 0 }
+    private func streakForHabit(_ habit: Habit, date: Date, isDone: Bool) -> Int {
+        guard let dayBefore = Calendar.current.date(byAdding: .day, value: -1, to: date) else { return 0 }
         let baseStreak = store.habitStreak(habitId: habit.id, asOf: dayBefore)
-        return isDone(habit.id) ? baseStreak + 1 : baseStreak
+        return isDone ? baseStreak + 1 : baseStreak
     }
 
     // MARK: - Actions

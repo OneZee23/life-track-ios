@@ -1,4 +1,5 @@
 import Foundation
+import HealthKit
 import SwiftUI
 import UserNotifications
 
@@ -48,6 +49,7 @@ class AppStore: ObservableObject {
     private let extrasKey = "lt_checkin_extras_v1"
     private let schemaVersionKey = "lt_schema_version"
     private let backupPrefix = "lt_backup_"
+    private let healthKit = HealthKitService()
 
     /// Increment when adding migrations.
     private static let currentSchemaVersion = 1
@@ -529,19 +531,20 @@ class AppStore: ObservableObject {
 
     // MARK: - Habits
 
-    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil) {
+    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil) {
         pushUndo()
         let maxOrder = activeHabits.map { $0.sortOrder }.max() ?? -1
-        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField))
+        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField, healthKitWorkoutType: healthKitWorkoutType))
         save()
     }
 
-    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil) {
+    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil) {
         pushUndo()
         guard let idx = habits.firstIndex(where: { $0.id == id }) else { return }
         habits[idx].name = name
         habits[idx].emoji = emoji
         habits[idx].extendedField = extendedField
+        habits[idx].healthKitWorkoutType = healthKitWorkoutType
         save()
     }
 
@@ -562,6 +565,50 @@ class AppStore: ObservableObject {
             }
         }
         save()
+    }
+
+    // MARK: - HealthKit Sync
+
+    func requestHealthKitAccess() async -> Bool {
+        await healthKit.requestAuthorization()
+    }
+
+    @MainActor
+    func syncHealthKitWorkouts() async {
+        let linked = activeHabits.filter { $0.healthKitWorkoutType != nil }
+        guard !linked.isEmpty else { return }
+
+        let cal = Calendar.current
+        let now = Date()
+        let startOfToday = cal.startOfDay(for: now)
+        let yesterday = cal.date(byAdding: .day, value: -1, to: now) ?? now
+        let startOfYesterday = cal.startOfDay(for: yesterday)
+
+        let todayTypes = await healthKit.fetchWorkoutTypes(from: startOfToday, to: now)
+        let yesterdayTypes = await healthKit.fetchWorkoutTypes(from: startOfYesterday, to: startOfToday)
+
+        guard !todayTypes.isEmpty || !yesterdayTypes.isEmpty else { return }
+
+        var changed = false
+        let todayStr = formatDate(now)
+        let yesterdayStr = formatDate(yesterday)
+
+        for habit in linked {
+            guard let typeStr = habit.healthKitWorkoutType,
+                  let workoutType = WorkoutType(rawValue: typeStr) else { continue }
+
+            let hkType = HealthKitService.hkActivityType(for: workoutType)
+
+            for (dateStr, types) in [(todayStr, todayTypes), (yesterdayStr, yesterdayTypes)] {
+                if types.contains(hkType.rawValue) && checkinValue(habitId: habit.id, date: dateStr) == 0 {
+                    if checkins[dateStr] == nil { checkins[dateStr] = [:] }
+                    checkins[dateStr]?[habit.id] = 1
+                    changed = true
+                }
+            }
+        }
+
+        if changed { save() }
     }
 
     // MARK: - Theme

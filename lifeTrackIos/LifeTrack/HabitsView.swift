@@ -1,3 +1,5 @@
+import Combine
+import HealthKit
 import SwiftUI
 
 private let EMOJIS = [
@@ -104,16 +106,18 @@ struct HabitsView: View {
             }
         }
         .sheet(isPresented: $showAddForm) {
-            HabitFormView(mode: .add) { name, emoji, ext in
-                store.addHabit(name: name, emoji: emoji, extendedField: ext)
+            HabitFormView(mode: .add) { name, emoji, ext, wType in
+                store.addHabit(name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType)
+                if wType != nil { Task { await store.syncHealthKitWorkouts() } }
                 showAddForm = false
             } onCancel: {
                 showAddForm = false
             }
         }
         .sheet(item: $editingHabit) { habit in
-            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext in
-                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext)
+            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext, wType in
+                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType)
+                if wType != nil { Task { await store.syncHealthKitWorkouts() } }
                 editingHabit = nil
             }, onCancel: {
                 editingHabit = nil
@@ -180,15 +184,22 @@ enum HabitFormMode {
 
 struct HabitFormView: View {
     let mode: HabitFormMode
-    let onSave: (String, String, ExtendedFieldConfig?) -> Void
+    let onSave: (String, String, ExtendedFieldConfig?, String?) -> Void
     let onCancel: () -> Void
     var onDelete: (() -> Void)? = nil
+
+    @EnvironmentObject var store: AppStore
 
     @State private var showDeleteConfirm = false
     @State private var name: String = ""
     @State private var emoji: String = "🎯"
     @State private var showEmojiPicker = false
     @FocusState private var nameFocused: Bool
+
+    // HealthKit workout sync
+    @State private var healthKitEnabled = false
+    @State private var selectedWorkoutType: WorkoutType = .cycling
+    @State private var showHealthKitDenied = false
 
     // Extended field config
     @State private var extendedEnabled = false
@@ -216,7 +227,7 @@ struct HabitFormView: View {
         }
     }
 
-    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
+    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?, String?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
         self.mode = mode
         self.onSave = onSave
         self.onCancel = onCancel
@@ -224,6 +235,10 @@ struct HabitFormView: View {
         if case .edit(let habit) = mode {
             _name = State(initialValue: habit.name)
             _emoji = State(initialValue: habit.emoji)
+            if let wType = habit.healthKitWorkoutType, let parsed = WorkoutType(rawValue: wType) {
+                _healthKitEnabled = State(initialValue: true)
+                _selectedWorkoutType = State(initialValue: parsed)
+            }
             if let ext = habit.extendedField {
                 _extendedEnabled = State(initialValue: true)
                 _extendedType = State(initialValue: ext.type)
@@ -276,6 +291,11 @@ struct HabitFormView: View {
                                             )
                                     )
                                     .focused($nameFocused)
+                                    .onReceive(Just(name)) { _ in
+                                        if name.count > AppConstants.habitNameMaxLength {
+                                            name = String(name.prefix(AppConstants.habitNameMaxLength))
+                                        }
+                                    }
                                     .onSubmit { if canSave { save() } }
 
                                 Text("\(name.count)/\(AppConstants.habitNameMaxLength)")
@@ -316,6 +336,11 @@ struct HabitFormView: View {
                                 }
                             }
                             .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+
+                        // Apple Health sync section
+                        if HKHealthStore.isHealthDataAvailable() {
+                            healthKitSection
                         }
 
                         // Extended check-in section
@@ -457,6 +482,98 @@ struct HabitFormView: View {
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: extendedEnabled)
+    }
+
+    // MARK: - Apple Health Section
+
+    private var healthKitSection: some View {
+        VStack(spacing: 12) {
+            // Toggle
+            HStack {
+                Text(L10n.healthKitSync)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Toggle("", isOn: $healthKitEnabled)
+                    .labelsHidden()
+                    .tint(Color(UIColor.systemGreen))
+                    .onChange(of: healthKitEnabled) { enabled in
+                        if enabled {
+                            Task {
+                                let granted = await store.requestHealthKitAccess()
+                                if !granted {
+                                    await MainActor.run {
+                                        healthKitEnabled = false
+                                        showHealthKitDenied = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+            )
+
+            if healthKitEnabled {
+                // Workout type grid
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5),
+                    spacing: 6
+                ) {
+                    ForEach(WorkoutType.allCases, id: \.self) { type in
+                        Button {
+                            selectedWorkoutType = type
+                        } label: {
+                            VStack(spacing: 2) {
+                                Text(L10n.workoutTypeEmoji(type))
+                                    .font(.system(size: 20))
+                                Text(L10n.workoutTypeName(type))
+                                    .font(.system(size: 10, weight: .medium))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(selectedWorkoutType == type
+                                          ? Color(UIColor.systemGreen).opacity(0.15)
+                                          : Color(UIColor.secondarySystemGroupedBackground))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .strokeBorder(
+                                                selectedWorkoutType == type ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5),
+                                                lineWidth: selectedWorkoutType == type ? 2 : 1
+                                            )
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+
+                // Footer
+                Text(L10n.healthKitFooter)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: healthKitEnabled)
+        .alert(L10n.healthKitSync, isPresented: $showHealthKitDenied) {
+            Button(L10n.healthKitOpenSettings) {
+                if let url = URL(string: "x-apple-health://") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(L10n.healthKitDeniedDetail)
+        }
     }
 
     // MARK: - Numeric Settings
@@ -918,6 +1035,7 @@ struct HabitFormView: View {
             )
         }
 
-        onSave(trimmedName, emoji, config)
+        let workoutType = healthKitEnabled ? selectedWorkoutType.rawValue : nil
+        onSave(trimmedName, emoji, config, workoutType)
     }
 }

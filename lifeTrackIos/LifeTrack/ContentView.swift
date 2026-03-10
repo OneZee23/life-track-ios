@@ -65,7 +65,10 @@ struct ContentView: View {
         }
         .onAppear { checkOnboardingThenGreeting() }
         .onChange(of: scenePhase) { phase in
-            if phase == .active { checkOnboardingThenGreeting() }
+            if phase == .active {
+                checkOnboardingThenGreeting()
+                Task { await store.syncHealthKitWorkouts() }
+            }
         }
         .onChange(of: store.onboardingCompleted) { completed in
             if !completed {

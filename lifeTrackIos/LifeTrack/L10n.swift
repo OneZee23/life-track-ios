@@ -58,6 +58,7 @@ enum L10n {
     static var telegramSubtitle: String { isRu ? "Разработка LifeTrack в реальном времени" : "LifeTrack development in real time" }
     static var youtubeSubtitle:  String { isRu ? "Канал автора"  : "Author's channel" }
     static var githubSubtitle:   String { isRu ? "Открытый исходный код" : "Open-source project" }
+    static var privacyPolicy:    String { isRu ? "Политика конфиденциальности" : "Privacy Policy" }
     static var version:          String { isRu ? "Версия"       : "Version" }
 
     static var aboutDescription: String {
@@ -433,5 +434,66 @@ enum L10n {
     }
     static var extendedPreview: String {
         isRu ? "Превью" : "Preview"
+    }
+
+    // MARK: - Apple Health Sync
+
+    static var healthKitSync: String {
+        "Apple Health"
+    }
+
+    static var healthKitFooter: String {
+        isRu ? "Авто-отмечается при наличии тренировки" : "Auto-checks when workout found"
+    }
+
+    static var healthKitDenied: String {
+        isRu ? "Нет доступа к Apple Health. Проверьте Настройки." : "Health access not granted. Check Settings."
+    }
+
+    static var healthKitDeniedDetail: String {
+        isRu ? "Откройте приложение Здоровье → Обмен → Программы → LifeTrack и включите доступ к тренировкам"
+             : "Open Health app → Sharing → Apps → LifeTrack and enable access to Workouts"
+    }
+
+    static var healthKitOpenSettings: String {
+        isRu ? "Открыть Здоровье" : "Open Health"
+    }
+
+    static var healthKitAutoLabel: String {
+        isRu ? "авто" : "auto"
+    }
+
+    static var newBadge: String {
+        isRu ? "новая" : "new"
+    }
+
+    static func workoutTypeName(_ type: WorkoutType) -> String {
+        switch type {
+        case .cycling:          return isRu ? "Велосипед"    : "Cycling"
+        case .running:          return isRu ? "Бег"          : "Running"
+        case .walking:          return isRu ? "Ходьба"       : "Walking"
+        case .swimming:         return isRu ? "Плавание"     : "Swimming"
+        case .yoga:             return isRu ? "Йога"         : "Yoga"
+        case .strengthTraining: return isRu ? "Силовая"      : "Strength"
+        case .hiking:           return isRu ? "Хайкинг"      : "Hiking"
+        case .dance:            return isRu ? "Танцы"         : "Dance"
+        case .martialArts:      return isRu ? "Единоборства"  : "Martial Arts"
+        case .pilates:          return isRu ? "Пилатес"       : "Pilates"
+        }
+    }
+
+    static func workoutTypeEmoji(_ type: WorkoutType) -> String {
+        switch type {
+        case .cycling:          return "🚴"
+        case .running:          return "🏃"
+        case .walking:          return "🚶"
+        case .swimming:         return "🏊"
+        case .yoga:             return "🧘"
+        case .strengthTraining: return "🏋️"
+        case .hiking:           return "🥾"
+        case .dance:            return "💃"
+        case .martialArts:      return "🥋"
+        case .pilates:          return "🤸"
+        }
     }
 }

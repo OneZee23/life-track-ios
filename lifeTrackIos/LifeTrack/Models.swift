@@ -92,6 +92,21 @@ struct CheckinExtra: Codable, Equatable {
     }
 }
 
+// MARK: - Workout Type (HealthKit sync)
+
+enum WorkoutType: String, Codable, CaseIterable {
+    case cycling
+    case running
+    case walking
+    case swimming
+    case yoga
+    case strengthTraining
+    case hiking
+    case dance
+    case martialArts
+    case pilates
+}
+
 // MARK: - Habit
 
 struct Habit: Identifiable, Codable, Equatable, Hashable {
@@ -102,8 +117,12 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
     var createdAt: Date
     var deletedAt: Date?
     var extendedField: ExtendedFieldConfig?
+    var healthKitWorkoutType: String?
 
     var isDeleted: Bool { deletedAt != nil }
+    var isNew: Bool {
+        Calendar.current.dateComponents([.day], from: createdAt, to: Date()).day ?? 99 <= 1
+    }
 
     init(
         id: String = UUID().uuidString,
@@ -112,7 +131,8 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         sortOrder: Int = 0,
         createdAt: Date = Date(),
         deletedAt: Date? = nil,
-        extendedField: ExtendedFieldConfig? = nil
+        extendedField: ExtendedFieldConfig? = nil,
+        healthKitWorkoutType: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -121,22 +141,24 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         self.createdAt = createdAt
         self.deletedAt = deletedAt
         self.extendedField = extendedField
+        self.healthKitWorkoutType = healthKitWorkoutType
     }
 
     // Required: Swift does not synthesize CodingKeys when init(from:) is custom
     enum CodingKeys: String, CodingKey {
-        case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField
+        case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField, healthKitWorkoutType
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id            = try c.decode(String.self, forKey: .id)
-        name          = try c.decode(String.self, forKey: .name)
-        emoji         = try c.decode(String.self, forKey: .emoji)
-        sortOrder     = try c.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
-        createdAt     = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? .distantPast
-        deletedAt     = try c.decodeIfPresent(Date.self, forKey: .deletedAt)
-        extendedField = try c.decodeIfPresent(ExtendedFieldConfig.self, forKey: .extendedField)
+        id                   = try c.decode(String.self, forKey: .id)
+        name                 = try c.decode(String.self, forKey: .name)
+        emoji                = try c.decode(String.self, forKey: .emoji)
+        sortOrder            = try c.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
+        createdAt            = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? .distantPast
+        deletedAt            = try c.decodeIfPresent(Date.self, forKey: .deletedAt)
+        extendedField        = try c.decodeIfPresent(ExtendedFieldConfig.self, forKey: .extendedField)
+        healthKitWorkoutType = try c.decodeIfPresent(String.self, forKey: .healthKitWorkoutType)
     }
 }
 
