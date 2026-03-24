@@ -16,6 +16,7 @@ struct CheckInView: View {
     @State private var celebrationMessage = ""
     @State private var hideTask: Task<Void, Never>?
     @State private var confettiTask: Task<Void, Never>?
+    @State private var selectedHabitForDetail: Habit? = nil
 
     private var dateStr: String {
         let date = selectedDay == .yesterday ? yesterday() : Date()
@@ -109,6 +110,10 @@ struct CheckInView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
+        .sheet(item: $selectedHabitForDetail) { habit in
+            HabitDetailView(habit: habit)
+                .environmentObject(store)
+        }
     }
 
     // MARK: - Habit Page (swipeable)
@@ -140,7 +145,8 @@ struct CheckInView: View {
                                     value: store.getExtra(habitId: habit.id, date: ds),
                                     onChange: { extra in
                                         store.setExtra(habitId: habit.id, date: ds, extra: extra)
-                                    }
+                                    },
+                                    healthKitMetricType: habit.healthKitMetricType
                                 )
                                 .transition(.opacity.combined(with: .move(edge: .top)))
                             }
@@ -149,6 +155,10 @@ struct CheckInView: View {
                             insertion: .move(edge: .bottom).combined(with: .opacity),
                             removal: .opacity
                         ))
+                        .onLongPressGesture {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            selectedHabitForDetail = habit
+                        }
                         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: habitDone)
                     }
                 }
@@ -325,6 +335,7 @@ private struct ExtendedCheckinPanel: View {
     let config: ExtendedFieldConfig
     let value: CheckinExtra?
     let onChange: (CheckinExtra) -> Void
+    var healthKitMetricType: String? = nil
 
     @State private var isEditingValue = false
     @State private var editValueText = ""
@@ -349,6 +360,10 @@ private struct ExtendedCheckinPanel: View {
                 .fill(Color(UIColor.secondarySystemGroupedBackground))
         )
     }
+
+    // MARK: - Helpers
+
+    private var isSleepMetric: Bool { healthKitMetricType == HealthKitMetricType.sleep.rawValue }
 
     // MARK: - Numeric
 
@@ -385,10 +400,7 @@ private struct ExtendedCheckinPanel: View {
             )
             .tint(Color(UIColor.systemGreen))
 
-            HStack(spacing: 2) {
-                Text(formatValue(current))
-                if !unit.isEmpty { Text(unit) }
-            }
+            Text(formatNumericDisplay(current, unit: unit, isSleep: isSleepMetric))
             .font(.system(size: 14, weight: .semibold, design: .monospaced))
             .foregroundColor(.primary)
             .frame(minWidth: 50, alignment: .trailing)
@@ -437,16 +449,9 @@ private struct ExtendedCheckinPanel: View {
                         }
                     }
                 } else {
-                    HStack(spacing: 2) {
-                        Text(formatValue(current))
-                            .font(.system(size: 17, weight: .bold, design: .monospaced))
-                            .foregroundColor(.primary)
-                        if !unit.isEmpty {
-                            Text(unit)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                    }
+                    Text(formatNumericDisplay(current, unit: unit, isSleep: isSleepMetric))
+                        .font(.system(size: 17, weight: .bold, design: .monospaced))
+                        .foregroundColor(.primary)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         editValueText = formatValue(current)

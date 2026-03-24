@@ -103,7 +103,7 @@ struct WeekProgressView: View {
                 } label: {
                     VStack(spacing: 4) {
                         Text(L10n.weekdaysShort[i])
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: DT.labelSize, weight: .semibold))
                             .foregroundColor(today ? Color(UIColor.systemOrange) : .secondary)
 
                         ZStack {
@@ -120,7 +120,7 @@ struct WeekProgressView: View {
                                     .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                                     .modifier(PulseModifier())
                                 Text("\(Calendar.current.component(.day, from: day))")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(Color(UIColor.systemOrange))
                             } else if isDone {
                                 Circle()
@@ -132,11 +132,11 @@ struct WeekProgressView: View {
                                 Circle()
                                     .fill(Color(UIColor.systemGray5))
                                 Text("\(Calendar.current.component(.day, from: day))")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .frame(width: 28, height: 28)
+                        .frame(width: 32, height: 32)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -187,12 +187,12 @@ struct WeekProgressView: View {
                     Text(habit.emoji)
                         .font(.system(size: 18))
                     Text(habit.name)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: DT.bodySize, weight: .semibold))
                         .foregroundColor(.primary)
                 }
                 Spacer()
                 Text("\(done)/\(total)")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .font(.system(size: DT.bodySize, weight: .bold, design: .monospaced))
                     .foregroundColor(done == total && total > 0
                                      ? Color(UIColor.systemGreen)
                                      : .secondary)
@@ -202,13 +202,13 @@ struct WeekProgressView: View {
             HStack(spacing: 3) {
                 ForEach(Array(dayValues.enumerated()), id: \.offset) { i, val in
                     let today = isToday(days[i])
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 3.5)
                         .fill(val == true ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                        .frame(height: 6)
+                        .frame(height: DT.progressHeight)
                         .overlay(
                             Group {
                                 if today {
-                                    RoundedRectangle(cornerRadius: 3)
+                                    RoundedRectangle(cornerRadius: 3.5)
                                         .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
                                 }
                             }
@@ -216,11 +216,7 @@ struct WeekProgressView: View {
                 }
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 14)
     }
 
     // MARK: - Week total
@@ -238,25 +234,20 @@ struct WeekProgressView: View {
 
         return HStack {
             Text(L10n.weekTotal)
-                .font(.system(size: 14))
+                .font(.system(size: DT.bodySize))
                 .foregroundColor(.primary)
             Spacer()
             HStack(alignment: .bottom, spacing: 2) {
                 Text("\(doneDays)")
-                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .font(.system(size: DT.valueSize, weight: .black, design: .rounded))
                     .foregroundColor(Color(UIColor.systemGreen))
                 Text("/\(totalDays)")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: DT.bodySize, weight: .medium))
                     .foregroundColor(.secondary)
                     .padding(.bottom, 4)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 18)
     }
 
 }

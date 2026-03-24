@@ -8,9 +8,9 @@ struct YearProgressView: View {
     let onDayTap: (Date) -> Void
     let onAnalyticsTap: () -> Void
 
-    private let cellSize: CGFloat = 14
-    private let cellSpacing: CGFloat = 3
-    private let dayLabelWidth: CGFloat = 26
+    private let cellSize: CGFloat = DT.cellSize
+    private let cellSpacing: CGFloat = DT.cellSpacing
+    private let dayLabelWidth: CGFloat = 28
 
     private var now: Date { Date() }
     private var currentYear: Int { Calendar.current.component(.year, from: now) }
@@ -82,61 +82,53 @@ struct YearProgressView: View {
     func firstCard(label: String, valueText: String, suffix: String?, hint: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: DT.labelSize, weight: .semibold))
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
                 .lineLimit(1)
             if let suffix = suffix {
                 HStack(alignment: .bottom, spacing: 1) {
                     Text(valueText)
-                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .font(.system(size: 24, weight: .black, design: .rounded))
                         .foregroundColor(color)
                     Text(suffix)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary)
                         .padding(.bottom, 2)
                 }
             } else {
                 Text(valueText)
-                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .font(.system(size: 24, weight: .black, design: .rounded))
                     .foregroundColor(color)
             }
             Text(hint)
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundColor(Color(UIColor.systemGray3))
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 14)
     }
 
     func summaryCard(label: String, hint: String, value: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: DT.labelSize, weight: .semibold))
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
                 .lineLimit(1)
             Text("\(value)")
-                .font(.system(size: 20, weight: .black, design: .rounded))
+                .font(.system(size: 24, weight: .black, design: .rounded))
                 .foregroundColor(color)
             Text(hint)
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundColor(Color(UIColor.systemGray3))
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 14)
     }
 
     // MARK: - GitHub-style heatmap
@@ -199,11 +191,7 @@ struct YearProgressView: View {
                 }
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 14)
     }
 
     // MARK: - Month labels
@@ -246,13 +234,13 @@ struct YearProgressView: View {
                 onDayTap(cell.date)
             } label: {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: DT.cellRadius)
                         .fill(isFutureDate ? Color(UIColor.systemGray6) : status.color)
                         .frame(width: cellSize, height: cellSize)
 
                     if today {
-                        RoundedRectangle(cornerRadius: 3)
-                            .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: DT.cellRadius)
+                            .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                             .frame(width: cellSize, height: cellSize)
                             .modifier(PulseModifier())
                     }
@@ -272,27 +260,27 @@ struct YearProgressView: View {
     var githubLegend: some View {
         HStack(spacing: 4) {
             Text(L10n.less)
-                .font(.system(size: 10))
+                .font(.system(size: 11))
                 .foregroundColor(.secondary)
 
             ForEach([DayStatus.none, .low, .medium, .high, .full], id: \.level) { status in
-                RoundedRectangle(cornerRadius: 2)
+                RoundedRectangle(cornerRadius: 3)
                     .fill(status.color)
-                    .frame(width: 10, height: 10)
+                    .frame(width: 12, height: 12)
             }
 
             Text(L10n.more)
-                .font(.system(size: 10))
+                .font(.system(size: 11))
                 .foregroundColor(.secondary)
 
             Spacer()
 
             HStack(spacing: 4) {
-                RoundedRectangle(cornerRadius: 2)
+                RoundedRectangle(cornerRadius: 3)
                     .strokeBorder(Color(UIColor.systemOrange), lineWidth: 1.5)
-                    .frame(width: 10, height: 10)
+                    .frame(width: 12, height: 12)
                 Text(L10n.today)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
         }
@@ -308,7 +296,7 @@ struct YearProgressView: View {
         } label: {
             HStack {
                 Text(L10n.detailedAnalytics)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: DT.bodySize, weight: .semibold))
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
@@ -317,9 +305,10 @@ struct YearProgressView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: DT.cardRadius)
                     .fill(Color(UIColor.systemGreen).opacity(0.1))
             )
+            .shadow(color: Color(UIColor.systemGreen).opacity(0.10), radius: 6, x: 0, y: 2)
         }
     }
 

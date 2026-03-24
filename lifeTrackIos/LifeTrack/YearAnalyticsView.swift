@@ -6,12 +6,13 @@ struct YearAnalyticsView: View {
     let year: Int
     let onYearChange: (Int) -> Void
     let onMonthTap: (Int) -> Void
+    var onHabitTap: ((Habit) -> Void)? = nil
 
     private var currentYear: Int { Calendar.current.component(.year, from: Date()) }
     private var isFutureYear: Bool { year > currentYear }
 
-    private let miniCellSize: CGFloat = 10
-    private let miniCellSpacing: CGFloat = 2
+    private let miniCellSize: CGFloat = DT.miniCellSize
+    private let miniCellSpacing: CGFloat = DT.miniCellSpacing
 
     private var hasNoData: Bool { computeCompletionRate().tracked == 0 }
 
@@ -63,29 +64,13 @@ struct YearAnalyticsView: View {
                     .foregroundColor(Color(UIColor.systemGreen))
             }
 
-            // Progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(height: 8)
-
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(UIColor.systemGreen))
-                        .frame(width: geo.size.width * CGFloat(stats.rate / 100.0), height: 8)
-                }
-            }
-            .frame(height: 8)
+            HealthProgressBar(rate: stats.rate, height: 8)
 
             Text(L10n.checkinsOf(stats.done, stats.tracked))
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard()
     }
 
     // MARK: - Streaks
@@ -111,14 +96,20 @@ struct YearAnalyticsView: View {
                 .textCase(.uppercase)
 
             ForEach(Array(stats.enumerated()), id: \.offset) { _, item in
-                habitRow(item: item)
+                if let onHabitTap = onHabitTap {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onHabitTap(item.habit)
+                    } label: {
+                        habitRow(item: item)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    habitRow(item: item)
+                }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard()
     }
 
     func habitRow(item: HabitStat) -> some View {
@@ -127,33 +118,22 @@ struct YearAnalyticsView: View {
                 Text(item.habit.emoji)
                     .font(.system(size: 16))
                 Text(item.habit.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: DT.bodySize, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
                 Text(item.tracked > 0 ? "\(Int(item.rate))%" : "—")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .font(.system(size: DT.bodySize, weight: .bold, design: .monospaced))
                     .foregroundColor(
                         item.rate >= 75 ? Color(UIColor.systemGreen) : .secondary
                     )
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(height: 5)
-
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(barColor(rate: item.rate))
-                        .frame(width: geo.size.width * CGFloat(item.rate / 100.0), height: 5)
-                }
-            }
-            .frame(height: 5)
+            HealthProgressBar(rate: item.rate)
 
             if item.tracked > 0 {
                 HStack {
                     Text(L10n.checkinsOf(item.done, item.tracked))
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundColor(Color(UIColor.systemGray3))
                     Spacer()
                 }
@@ -182,35 +162,20 @@ struct YearAnalyticsView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard()
     }
 
     func monthRow(item: MonthlyStat) -> some View {
         HStack(spacing: 10) {
             Text(L10n.monthsShort[item.month])
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: DT.captionSize, weight: .medium))
                 .foregroundColor(.primary)
                 .frame(width: 32, alignment: .leading)
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(height: 5)
-
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(barColor(rate: item.rate))
-                        .frame(width: geo.size.width * CGFloat(item.rate / 100.0), height: 5)
-                }
-            }
-            .frame(height: 5)
+            HealthProgressBar(rate: item.rate)
 
             Text(item.tracked > 0 ? "\(Int(item.rate))%" : "—")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .font(.system(size: DT.captionSize, weight: .bold, design: .monospaced))
                 .foregroundColor(item.rate >= 75 ? Color(UIColor.systemGreen) : .secondary)
                 .frame(width: 36, alignment: .trailing)
 
@@ -253,11 +218,11 @@ struct YearAnalyticsView: View {
                 Text(habit.emoji)
                     .font(.system(size: 16))
                 Text(habit.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: DT.bodySize, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
                 Text(tracked > 0 ? "\(Int(rate))%" : "—")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .font(.system(size: DT.bodySize, weight: .bold, design: .monospaced))
                     .foregroundColor(rate >= 75 ? Color(UIColor.systemGreen) : .secondary)
             }
 
@@ -282,11 +247,7 @@ struct YearAnalyticsView: View {
                 Spacer()
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 14)
     }
 
     func miniYearHeatmap(grid: YearGrid, habitId: String) -> some View {
@@ -343,7 +304,7 @@ struct YearAnalyticsView: View {
             let status = cell.status ?? .none
             let isFutureDate = isFuture(cell.date) && !isToday(cell.date)
 
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 2.5)
                 .fill(isFutureDate ? Color(UIColor.systemGray6) : status.color)
                 .frame(width: miniCellSize, height: miniCellSize)
         } else {

@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.4.0 | **Started:** Feb 2026
+**Status:** v0.5.0 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---
@@ -64,16 +64,25 @@ Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses 
 - Day switcher: Yesterday / Today with sliding pill selector
 - 100% completion → celebration overlay with confetti, haptic, and streak count
 - Daily greeting with yesterday's stats on first open
+- Long press on habit → detailed analytics card
 
-### Progress Screen (Drill-down)
-- **Year:** GitHub-style heatmap with 5-level color gradient + summary cards (day counter, completed, perfect)
+### Apple Health Integration
+- **Sleep:** auto-syncs duration from Apple Health (window 18:00→12:00), stored in minutes, displayed as "7h 50m"
+- **Steps:** auto-syncs exact step count, updates on every app open
+- **Workout distance:** auto-syncs km for cycling, running, walking, swimming, hiking
+- **Workouts:** auto-checks habits linked to workout types (10 types supported)
+- "auto" badge on synced habit cards
+
+### Progress Screen (Apple Health quality design)
+- **Year:** GitHub-style heatmap (16px cells) + summary cards with shadows
 - **Month:** Calendar grid with gradient colors, current & best streaks
-- **Week:** Per-habit bars, weekly summary
-- **Day:** Detailed view per habit with left/right navigation arrows
-- **Year Analytics:** Completion rate, streaks, habit ranking, monthly breakdown
-- **Month Analytics:** Completion rate, streaks, habit ranking, weekly breakdown
-- **Today:** Pulsing orange border across all views
+- **Week:** Per-habit pill-shaped progress bars, weekly summary
+- **Day:** Score circle (80pt, radial gradient) + habit rows with shadow cards
+- **Year Analytics:** Completion rate, pill-shaped progress bars, habit ranking, mini heatmaps, monthly breakdown
+- **Month Analytics:** Completion rate, habit ranking, weekly breakdown
+- **Habit Detail:** Bar chart (220pt) with avg line, period selector (7d/30d/90d/Year), tap-to-inspect bars, avg/min/max stats, full log
 - Drill-down navigation: Year → Month → Week → Day, Analytics → Month → Week → Day
+- Design system: `DT` tokens, `.healthCard()` shadow modifier, `HealthProgressBar` pill component
 
 ### Habits Management
 - Add / edit / delete with confirmation dialog
@@ -81,6 +90,7 @@ Your data becomes a heatmap. Green = did something. Gray = didn't. Today pulses 
 - Soft-delete preserves check-in history
 - Emoji picker (20 presets), max 10 habits
 - Drag & drop reorder (always-on drag handles)
+- Extended check-in: numeric (with presets: Time/Count/Money/Custom), comment, or rating
 - Default: Sleep, Activity, Nutrition, Mental, Projects
 
 ### Settings
@@ -101,6 +111,7 @@ Framework:   SwiftUI
 Language:    Swift
 State:       @StateObject + ObservableObject
 Storage:     UserDefaults + JSON (Codable)
+Health:      HealthKit (workouts, sleep, steps)
 Animations:  SwiftUI .spring(), withAnimation
 Haptics:     UIImpactFeedbackGenerator
 Min iOS:     16.0+
@@ -122,7 +133,8 @@ life-track-ios/
 │   │   ├── AppStore.swift              # ObservableObject, UserDefaults persistence
 │   │   ├── DateUtils.swift             # Date helpers
 │   │   ├── L10n.swift                  # Localization (ru/en, runtime switching)
-│   │   ├── SharedComponents.swift      # Shared UI (NavArrowButton, PlaceholderView, StreakCardView)
+│   │   ├── SharedComponents.swift      # Design system (DT tokens, HealthCard, HealthProgressBar)
+│   │   ├── HealthKitService.swift      # Apple Health integration (workouts, sleep, steps)
 │   │   │
 │   │   ├── CheckInView.swift           # Daily check-in (today/yesterday)
 │   │   ├── HabitToggleCard.swift       # Tap card with spring animation
@@ -137,6 +149,7 @@ life-track-ios/
 │   │   ├── DayProgressView.swift       # Day detailed view + day navigation
 │   │   ├── YearAnalyticsView.swift     # Year analytics (rate, streaks, habits, months)
 │   │   ├── MonthAnalyticsView.swift    # Month analytics (rate, streaks, habits, weeks)
+│   │   ├── HabitDetailView.swift       # Per-habit detail (chart, stats, log)
 │   │   │
 │   │   ├── HabitsView.swift            # Habit CRUD + drag & drop reorder
 │   │   └── SettingsView.swift          # Settings (theme, language, about)

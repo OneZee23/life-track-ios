@@ -381,10 +381,6 @@ enum L10n {
 
     // MARK: - Extended Check-in
 
-    static var extendedCheckin: String {
-        isRu ? "Расширенный чекин" : "Extended check-in"
-    }
-
     static var extendedNumeric: String {
         isRu ? "Числовой" : "Numeric"
     }
@@ -405,36 +401,40 @@ enum L10n {
         isRu ? "ч, км, л..." : "h, km, L..."
     }
 
-    static var extendedMin: String {
-        isRu ? "Мин" : "Min"
-    }
-
-    static var extendedMax: String {
-        isRu ? "Макс" : "Max"
-    }
-
     static var extendedStep: String {
         isRu ? "Шаг" : "Step"
-    }
-
-    static var extendedSlider: String {
-        isRu ? "Слайдер" : "Slider"
-    }
-
-    static var extendedStepper: String {
-        isRu ? "Счётчик" : "Stepper"
-    }
-
-    static var extendedInputStyle: String {
-        isRu ? "Ввод" : "Input"
     }
 
     static var extendedNotePlaceholder: String {
         isRu ? "Заметка..." : "Note..."
     }
-    static var extendedPreview: String {
-        isRu ? "Превью" : "Preview"
+
+    static var extendedTextShort: String {
+        isRu ? "Коммент." : "Comment"
     }
+
+    // MARK: - Check-in Type & Presets
+    static var checkinType: String { isRu ? "Тип чекина" : "Check-in type" }
+    static var presetTime: String { isRu ? "Время" : "Time" }
+    static var presetCount: String { isRu ? "Кол-во" : "Count" }
+    static var presetMoney: String { isRu ? "Деньги" : "Money" }
+    static var presetCustom: String { isRu ? "Своё" : "Custom" }
+
+    // MARK: - Habit Detail
+
+    static var habitDetailAvg: String { isRu ? "Среднее" : "Average" }
+    static var habitDetailMin: String { isRu ? "Мин" : "Min" }
+    static var habitDetailMax: String { isRu ? "Макс" : "Max" }
+    static var habitDetailStreak: String { isRu ? "Стрик" : "Streak" }
+    static var habitDetailBestStreak: String { isRu ? "Лучший" : "Best" }
+    static var habitDetailCompletion: String { isRu ? "Выполн." : "Done" }
+    static var habitDetailLog: String { isRu ? "Лог" : "Log" }
+    static var habitDetailNoData: String { isRu ? "Нет данных" : "No data" }
+    static var habitDetailPeriod7d: String { isRu ? "7д" : "7d" }
+    static var habitDetailPeriod30d: String { isRu ? "30д" : "30d" }
+    static var habitDetailPeriod90d: String { isRu ? "90д" : "90d" }
+    static var habitDetailPeriodYear: String { isRu ? "Год" : "Year" }
+    static var habitDetailDays: String { isRu ? "д" : "d" }
 
     // MARK: - Apple Health Sync
 
@@ -442,8 +442,28 @@ enum L10n {
         "Apple Health"
     }
 
+    static var healthKitWorkoutLabel: String {
+        isRu ? "Тренировка" : "Workout"
+    }
+
+    static var healthKitSleepLabel: String {
+        isRu ? "Сон" : "Sleep"
+    }
+
+    static var healthKitStepsLabel: String {
+        isRu ? "Шаги" : "Steps"
+    }
+
     static var healthKitFooter: String {
         isRu ? "Авто-отмечается при наличии тренировки" : "Auto-checks when workout found"
+    }
+
+    static var healthKitSleepFooter: String {
+        isRu ? "Авто-записывает длительность сна из Apple Health" : "Auto-logs sleep duration from Apple Health"
+    }
+
+    static var healthKitStepsFooter: String {
+        isRu ? "Авто-записывает количество шагов из Apple Health" : "Auto-logs step count from Apple Health"
     }
 
     static var healthKitDenied: String {
@@ -451,8 +471,8 @@ enum L10n {
     }
 
     static var healthKitDeniedDetail: String {
-        isRu ? "Откройте приложение Здоровье → Обмен → Программы → LifeTrack и включите доступ к тренировкам"
-             : "Open Health app → Sharing → Apps → LifeTrack and enable access to Workouts"
+        isRu ? "Откройте приложение Здоровье → Обмен → Программы → LifeTrack и включите доступ к данным"
+             : "Open Health app → Sharing → Apps → LifeTrack and enable access"
     }
 
     static var healthKitOpenSettings: String {
@@ -494,6 +514,20 @@ enum L10n {
         case .dance:            return "💃"
         case .martialArts:      return "🥋"
         case .pilates:          return "🤸"
+        }
+    }
+
+    static func metricTypeName(_ type: HealthKitMetricType) -> String {
+        switch type {
+        case .sleep: return isRu ? "Сон"  : "Sleep"
+        case .steps: return isRu ? "Шаги" : "Steps"
+        }
+    }
+
+    static func metricTypeEmoji(_ type: HealthKitMetricType) -> String {
+        switch type {
+        case .sleep: return "🛌"
+        case .steps: return "👟"
         }
     }
 }

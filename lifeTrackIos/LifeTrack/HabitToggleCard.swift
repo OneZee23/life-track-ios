@@ -43,7 +43,7 @@ struct HabitToggleCard: View {
                                 )
                         }
 
-                        if habit.healthKitWorkoutType != nil {
+                        if habit.isHealthKitLinked {
                             Text(L10n.healthKitAutoLabel)
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(Color(UIColor.systemGreen))

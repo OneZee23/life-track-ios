@@ -106,18 +106,18 @@ struct HabitsView: View {
             }
         }
         .sheet(isPresented: $showAddForm) {
-            HabitFormView(mode: .add) { name, emoji, ext, wType in
-                store.addHabit(name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType)
-                if wType != nil { Task { await store.syncHealthKitWorkouts() } }
+            HabitFormView(mode: .add) { name, emoji, ext, wType, mType in
+                store.addHabit(name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType)
+                if wType != nil || mType != nil { Task { await store.syncHealthKitWorkouts() } }
                 showAddForm = false
             } onCancel: {
                 showAddForm = false
             }
         }
         .sheet(item: $editingHabit) { habit in
-            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext, wType in
-                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType)
-                if wType != nil { Task { await store.syncHealthKitWorkouts() } }
+            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext, wType, mType in
+                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType)
+                if wType != nil || mType != nil { Task { await store.syncHealthKitWorkouts() } }
                 editingHabit = nil
             }, onCancel: {
                 editingHabit = nil
@@ -184,7 +184,7 @@ enum HabitFormMode {
 
 struct HabitFormView: View {
     let mode: HabitFormMode
-    let onSave: (String, String, ExtendedFieldConfig?, String?) -> Void
+    let onSave: (String, String, ExtendedFieldConfig?, String?, String?) -> Void
     let onCancel: () -> Void
     var onDelete: (() -> Void)? = nil
 
@@ -196,29 +196,20 @@ struct HabitFormView: View {
     @State private var showEmojiPicker = false
     @FocusState private var nameFocused: Bool
 
-    // HealthKit workout sync
+    // HealthKit sync
+    enum HealthKitSyncMode: Int, CaseIterable {
+        case workout, sleep, steps
+    }
     @State private var healthKitEnabled = false
+    @State private var healthKitSyncMode: HealthKitSyncMode = .workout
     @State private var selectedWorkoutType: WorkoutType = .cycling
     @State private var showHealthKitDenied = false
 
     // Extended field config
-    @State private var extendedEnabled = false
-    @State private var extendedType: ExtendedFieldType = .numeric
-    @State private var numericUnit = ""
-    @State private var numericMin: Double = 0
-    @State private var numericMax: Double = 10
-    @State private var numericStep: Double = 1
-    @State private var numericStyle: NumericInputStyle = .slider
-    @State private var hasMax = true
-    @State private var slideFromTrailing = true
-
-    // Preview
-    @State private var previewNumeric: Double = 5
-    @State private var previewRating: Int? = nil
-    @State private var previewText: String = ""
-    @State private var isEditingPreviewValue = false
-    @State private var editPreviewValueText = ""
-    @FocusState private var editPreviewValueFocused: Bool
+    @State private var selectedExtendedType: ExtendedFieldType? = nil
+    @State private var selectedPreset: NumericPreset = .time
+    @State private var customUnit: String = ""
+    @State private var customStep: Double = 1
 
     private var title: String {
         switch mode {
@@ -227,7 +218,7 @@ struct HabitFormView: View {
         }
     }
 
-    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?, String?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
+    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?, String?, String?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
         self.mode = mode
         self.onSave = onSave
         self.onCancel = onCancel
@@ -237,17 +228,21 @@ struct HabitFormView: View {
             _emoji = State(initialValue: habit.emoji)
             if let wType = habit.healthKitWorkoutType, let parsed = WorkoutType(rawValue: wType) {
                 _healthKitEnabled = State(initialValue: true)
+                _healthKitSyncMode = State(initialValue: .workout)
                 _selectedWorkoutType = State(initialValue: parsed)
+            } else if let mType = habit.healthKitMetricType, let parsed = HealthKitMetricType(rawValue: mType) {
+                _healthKitEnabled = State(initialValue: true)
+                _healthKitSyncMode = State(initialValue: parsed == .sleep ? .sleep : .steps)
             }
             if let ext = habit.extendedField {
-                _extendedEnabled = State(initialValue: true)
-                _extendedType = State(initialValue: ext.type)
-                _numericUnit = State(initialValue: ext.unit ?? "")
-                _numericMin = State(initialValue: ext.minValue ?? 0)
-                _numericMax = State(initialValue: ext.maxValue ?? 10)
-                _numericStep = State(initialValue: ext.step ?? 1)
-                _hasMax = State(initialValue: ext.maxValue != nil)
-                _numericStyle = State(initialValue: ext.maxValue != nil ? (ext.inputStyle ?? .slider) : .stepper)
+                _selectedExtendedType = State(initialValue: ext.type)
+                if ext.type == .numeric {
+                    _selectedPreset = State(initialValue: Self.detectPreset(from: ext))
+                    if Self.detectPreset(from: ext) == .custom {
+                        _customUnit = State(initialValue: ext.unit ?? "")
+                        _customStep = State(initialValue: ext.step ?? 1)
+                    }
+                }
             }
         }
     }
@@ -343,8 +338,10 @@ struct HabitFormView: View {
                             healthKitSection
                         }
 
-                        // Extended check-in section
-                        extendedFieldSection
+                        // Extended check-in section (hidden when metric auto-configures it)
+                        if !(healthKitEnabled && healthKitSyncMode != .workout) {
+                            extendedFieldSection
+                        }
 
                         // Buttons
                         HStack(spacing: 10) {
@@ -407,7 +404,6 @@ struct HabitFormView: View {
                     Spacer()
                     Button(L10n.done) {
                         nameFocused = false
-                        editPreviewValueFocused = false
                     }
                 }
             }
@@ -431,57 +427,154 @@ struct HabitFormView: View {
     // MARK: - Extended Field Section
 
     private var extendedFieldSection: some View {
-        VStack(spacing: 12) {
-            // Toggle
-            HStack {
-                Text(L10n.extendedCheckin)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
-                Spacer()
-                Toggle("", isOn: $extendedEnabled)
-                    .labelsHidden()
-                    .tint(Color(UIColor.systemGreen))
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-            )
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.checkinType)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.primary)
 
-            if extendedEnabled {
-                // Type picker — intercept to set slide direction
-                Picker("", selection: Binding(
-                    get: { extendedType },
-                    set: { newType in
-                        let order: [ExtendedFieldType] = [.numeric, .text, .rating]
-                        slideFromTrailing = (order.firstIndex(of: newType) ?? 0) > (order.firstIndex(of: extendedType) ?? 0)
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            extendedType = newType
+            // Type chips row
+            HStack(spacing: 8) {
+                typeChip(type: .numeric, label: L10n.extendedNumeric)
+                typeChip(type: .text, label: L10n.extendedTextShort)
+                typeChip(type: .rating, label: L10n.extendedRating)
+            }
+
+            // Numeric presets
+            if selectedExtendedType == .numeric {
+                HStack(spacing: 8) {
+                    presetChip(preset: .time, icon: "clock", label: L10n.presetTime)
+                    presetChip(preset: .count, icon: "number", label: L10n.presetCount)
+                    presetChip(preset: .money, icon: "banknote", label: L10n.presetMoney)
+                    presetChip(preset: .custom, icon: "slider.horizontal.3", label: L10n.presetCustom)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+
+                // Custom preset fields
+                if selectedPreset == .custom {
+                    VStack(spacing: 10) {
+                        // Unit field
+                        HStack(spacing: 10) {
+                            Text(L10n.extendedUnit)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.primary)
+                            TextField(L10n.extendedUnitHint, text: Binding(
+                                get: { customUnit },
+                                set: { customUnit = String($0.prefix(AppConstants.unitMaxLength)) }
+                            ))
+                            .font(.system(size: 15))
+                            .multilineTextAlignment(.trailing)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color(UIColor.secondarySystemGroupedBackground))
+                        )
+
+                        // Step picker chips
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(L10n.extendedStep)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                            HStack(spacing: 6) {
+                                ForEach([0.5, 1.0, 5.0, 10.0, 50.0, 100.0], id: \.self) { s in
+                                    Button {
+                                        customStep = s
+                                    } label: {
+                                        Text(formatValue(s))
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(customStep == s ? .white : .primary)
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 36)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(customStep == s
+                                                          ? Color(UIColor.systemGreen)
+                                                          : Color(UIColor.systemGray5))
+                                            )
+                                    }
+                                }
+                            }
                         }
                     }
-                )) {
-                    Text(L10n.extendedNumeric).tag(ExtendedFieldType.numeric)
-                    Text(L10n.extendedText).tag(ExtendedFieldType.text)
-                    Text(L10n.extendedRating).tag(ExtendedFieldType.rating)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                .pickerStyle(.segmented)
-
-                // Type-dependent content — slides horizontally on type change
-                VStack(spacing: 12) {
-                    if extendedType == .numeric {
-                        numericSettingsSection
-                    }
-                    extendedPreviewSection
-                }
-                .id(extendedType)
-                .transition(.asymmetric(
-                    insertion: .move(edge: slideFromTrailing ? .trailing : .leading).combined(with: .opacity),
-                    removal: .move(edge: slideFromTrailing ? .leading : .trailing).combined(with: .opacity)
-                ))
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: extendedEnabled)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedExtendedType)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedPreset)
+    }
+
+    // MARK: - Type Chip
+
+    private func typeChip(type: ExtendedFieldType, label: String) -> some View {
+        let selected = selectedExtendedType == type
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                selectedExtendedType = selected ? nil : type
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(selected ? .white : .primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Preset Chip
+
+    private func presetChip(preset: NumericPreset, icon: String, label: String) -> some View {
+        let selected = selectedPreset == preset
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                selectedPreset = preset
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .foregroundColor(selected ? .white : .primary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Detect Preset
+
+    private static func detectPreset(from config: ExtendedFieldConfig) -> NumericPreset {
+        let unit = config.unit ?? ""
+        let step = config.step ?? 1
+        if (unit == "мин" || unit == "min") && step == 5 { return .time }
+        if (unit == "шт" || unit == "pcs") && step == 1 { return .count }
+        if (unit == "₽" || unit == "$") && step == 100 { return .money }
+        return .custom
+    }
+
+    // MARK: - Resolved Numeric Params
+
+    private func resolvedNumericParams() -> (unit: String, step: Double) {
+        switch selectedPreset {
+        case .time:   return (L10n.isRu ? "мин" : "min", 5)
+        case .count:  return (L10n.isRu ? "шт" : "pcs", 1)
+        case .money:  return (L10n.isRu ? "₽" : "$", 100)
+        case .custom: return (customUnit, customStep)
+        }
     }
 
     // MARK: - Apple Health Section
@@ -519,51 +612,75 @@ struct HabitFormView: View {
             )
 
             if healthKitEnabled {
-                // Workout type grid
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5),
-                    spacing: 6
-                ) {
-                    ForEach(WorkoutType.allCases, id: \.self) { type in
-                        Button {
-                            selectedWorkoutType = type
-                        } label: {
-                            VStack(spacing: 2) {
-                                Text(L10n.workoutTypeEmoji(type))
-                                    .font(.system(size: 20))
-                                Text(L10n.workoutTypeName(type))
-                                    .font(.system(size: 10, weight: .medium))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(selectedWorkoutType == type
-                                          ? Color(UIColor.systemGreen).opacity(0.15)
-                                          : Color(UIColor.secondarySystemGroupedBackground))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .strokeBorder(
-                                                selectedWorkoutType == type ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5),
-                                                lineWidth: selectedWorkoutType == type ? 2 : 1
-                                            )
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
+                // Sync mode picker: Workout / Sleep / Steps
+                Picker("", selection: $healthKitSyncMode) {
+                    Text(L10n.healthKitWorkoutLabel).tag(HealthKitSyncMode.workout)
+                    Text(L10n.healthKitSleepLabel).tag(HealthKitSyncMode.sleep)
+                    Text(L10n.healthKitStepsLabel).tag(HealthKitSyncMode.steps)
                 }
+                .pickerStyle(.segmented)
                 .transition(.opacity.combined(with: .move(edge: .top)))
 
-                // Footer
-                Text(L10n.healthKitFooter)
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+                switch healthKitSyncMode {
+                case .workout:
+                    // Workout type grid
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5),
+                        spacing: 6
+                    ) {
+                        ForEach(WorkoutType.allCases, id: \.self) { type in
+                            Button {
+                                selectedWorkoutType = type
+                            } label: {
+                                VStack(spacing: 2) {
+                                    Text(L10n.workoutTypeEmoji(type))
+                                        .font(.system(size: 20))
+                                    Text(L10n.workoutTypeName(type))
+                                        .font(.system(size: 10, weight: .medium))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.7)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(selectedWorkoutType == type
+                                              ? Color(UIColor.systemGreen).opacity(0.15)
+                                              : Color(UIColor.secondarySystemGroupedBackground))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .strokeBorder(
+                                                    selectedWorkoutType == type ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5),
+                                                    lineWidth: selectedWorkoutType == type ? 2 : 1
+                                                )
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+
+                    Text(L10n.healthKitFooter)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+
+                case .sleep:
+                    Text(L10n.healthKitSleepFooter)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+
+                case .steps:
+                    Text(L10n.healthKitStepsFooter)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: healthKitEnabled)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: healthKitSyncMode)
         .alert(L10n.healthKitSync, isPresented: $showHealthKitDenied) {
             Button(L10n.healthKitOpenSettings) {
                 if let url = URL(string: "x-apple-health://") {
@@ -576,445 +693,6 @@ struct HabitFormView: View {
         }
     }
 
-    // MARK: - Numeric Settings
-
-    private var numericSettingsSection: some View {
-        VStack(spacing: 10) {
-            // Input style — only when max is set (slider needs bounded range)
-            if hasMax {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.extendedInputStyle)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Picker("", selection: $numericStyle) {
-                        Text(L10n.extendedSlider).tag(NumericInputStyle.slider)
-                        Text(L10n.extendedStepper).tag(NumericInputStyle.stepper)
-                    }
-                    .pickerStyle(.segmented)
-                }
-            }
-
-            // Unit
-            HStack(spacing: 10) {
-                Text(L10n.extendedUnit)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
-                TextField(L10n.extendedUnitHint, text: Binding(
-                    get: { numericUnit },
-                    set: { numericUnit = String($0.prefix(AppConstants.unitMaxLength)) }
-                ))
-                .font(.system(size: 15))
-                .multilineTextAlignment(.trailing)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-            )
-
-            // Min
-            numericFieldRow(
-                label: L10n.extendedMin,
-                value: $numericMin,
-                range: 0...max(0, hasMax ? numericMax - numericStep : AppConstants.numericUnboundedMax - 1)
-            )
-
-            // Max (optional)
-            maxRow
-
-            // Step
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L10n.extendedStep)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                HStack(spacing: 6) {
-                    ForEach([0.5, 1.0, 5.0, 10.0], id: \.self) { s in
-                        Button {
-                            numericStep = s
-                            if hasMax && numericMax < numericMin + s {
-                                numericMax = numericMin + s
-                            }
-                        } label: {
-                            Text(formatValue(s))
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(numericStep == s ? .white : .primary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 36)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(numericStep == s
-                                              ? Color(UIColor.systemGreen)
-                                              : Color(UIColor.systemGray5))
-                                )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Max Row
-
-    private var maxRow: some View {
-        Group {
-            if hasMax {
-                HStack(spacing: 6) {
-                    Text(L10n.extendedMax)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-
-                    Button {
-                        numericMax = max(numericMin + numericStep, numericMax - numericStep)
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(numericMax <= numericMin + numericStep ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
-                            .frame(width: 28, height: 28)
-                            .background(Circle().fill(Color(UIColor.systemGray5)))
-                    }
-                    .disabled(numericMax <= numericMin + numericStep)
-
-                    Text(formatValue(numericMax))
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
-                        .foregroundColor(.primary)
-                        .frame(minWidth: 32)
-
-                    Button {
-                        numericMax = min(AppConstants.numericUnboundedMax, numericMax + numericStep)
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(numericMax >= AppConstants.numericUnboundedMax ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
-                            .frame(width: 28, height: 28)
-                            .background(Circle().fill(Color(UIColor.systemGray5)))
-                    }
-                    .disabled(numericMax >= AppConstants.numericUnboundedMax)
-
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            hasMax = false
-                            numericStyle = .stepper
-                        }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(Color(UIColor.systemGray3))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(UIColor.secondarySystemGroupedBackground))
-                )
-            } else {
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        hasMax = true
-                        numericMax = max(numericMin + numericStep, 10)
-                    }
-                } label: {
-                    HStack {
-                        Text(L10n.extendedMax)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("∞")
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundColor(Color(UIColor.systemGreen))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(UIColor.secondarySystemGroupedBackground))
-                    )
-                }
-            }
-        }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hasMax)
-    }
-
-    // MARK: - Field Row Helper
-
-    private func numericFieldRow(label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        HStack(spacing: 6) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.secondary)
-
-            Spacer()
-
-            Button {
-                let newVal = max(range.lowerBound, value.wrappedValue - numericStep)
-                value.wrappedValue = newVal
-            } label: {
-                Image(systemName: "minus")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(value.wrappedValue <= range.lowerBound ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(Color(UIColor.systemGray5)))
-            }
-            .disabled(value.wrappedValue <= range.lowerBound)
-
-            Text(formatValue(value.wrappedValue))
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
-                .foregroundColor(.primary)
-                .frame(minWidth: 32)
-
-            Button {
-                let newVal = min(range.upperBound, value.wrappedValue + numericStep)
-                value.wrappedValue = newVal
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(value.wrappedValue >= range.upperBound ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(Color(UIColor.systemGray5)))
-            }
-            .disabled(value.wrappedValue >= range.upperBound)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
-    }
-
-
-    // MARK: - Live Preview
-
-    private var extendedPreviewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.extendedPreview)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.secondary)
-
-            VStack(spacing: 2) {
-                // Mini habit card
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(UIColor.systemGreen).opacity(0.15))
-                            .frame(width: 34, height: 34)
-                        Text(emoji)
-                            .font(.system(size: 15))
-                    }
-
-                    Text(name.isEmpty ? L10n.name : name)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(name.isEmpty ? .secondary : .primary)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    ZStack {
-                        Circle()
-                            .fill(Color(UIColor.systemGreen))
-                            .frame(width: 26, height: 26)
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(UIColor.secondarySystemGroupedBackground))
-                )
-
-                // Preview panel
-                Group {
-                    switch extendedType {
-                    case .numeric:
-                        previewNumericPanel
-                    case .rating:
-                        previewRatingPanel
-                    case .text:
-                        previewTextPanel
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(UIColor.secondarySystemGroupedBackground))
-                )
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.systemGray6))
-        )
-    }
-
-    // MARK: - Preview Panels
-
-    private var effectiveMax: Double {
-        hasMax ? numericMax : AppConstants.numericUnboundedMax
-    }
-
-    private var safeStep: Double {
-        let range = effectiveMax - numericMin
-        return range > 0 ? min(numericStep, range) : numericStep
-    }
-
-    private var previewNumericPanel: some View {
-        Group {
-            if numericStyle == .slider && hasMax {
-                HStack(spacing: 10) {
-                    Slider(
-                        value: $previewNumeric,
-                        in: numericMin...max(numericMin + safeStep, numericMax),
-                        step: safeStep
-                    )
-                    .tint(Color(UIColor.systemGreen))
-
-                    HStack(spacing: 2) {
-                        Text(formatValue(previewNumeric))
-                        if !numericUnit.isEmpty { Text(numericUnit) }
-                    }
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.primary)
-                    .frame(minWidth: 50, alignment: .trailing)
-                }
-            } else {
-                // Stepper with manual input on tap
-                HStack(spacing: 12) {
-                    Spacer()
-
-                    Button {
-                        previewNumeric = max(numericMin, previewNumeric - numericStep)
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(previewNumeric <= numericMin ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
-                            .frame(width: 36, height: 36)
-                            .background(Circle().fill(Color(UIColor.systemGray5)))
-                    }
-                    .disabled(previewNumeric <= numericMin)
-
-                    // Value — tap to type manually
-                    Group {
-                        if isEditingPreviewValue {
-                            TextField("", text: $editPreviewValueText)
-                                .keyboardType(.decimalPad)
-                                .font(.system(size: 17, weight: .bold, design: .monospaced))
-                                .multilineTextAlignment(.center)
-                                .focused($editPreviewValueFocused)
-                                .onAppear { editPreviewValueFocused = true }
-                                .onChange(of: editPreviewValueFocused) { focused in
-                                    if !focused { commitPreviewEdit() }
-                                }
-                        } else {
-                            HStack(spacing: 2) {
-                                Text(formatValue(previewNumeric))
-                                    .font(.system(size: 17, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.primary)
-                                if !numericUnit.isEmpty {
-                                    Text(numericUnit)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                editPreviewValueText = formatValue(previewNumeric)
-                                isEditingPreviewValue = true
-                            }
-                        }
-                    }
-                    .frame(width: 110)
-
-                    Button {
-                        previewNumeric = min(effectiveMax, previewNumeric + numericStep)
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(previewNumeric >= effectiveMax ? Color(UIColor.systemGray4) : Color(UIColor.systemGreen))
-                            .frame(width: 36, height: 36)
-                            .background(Circle().fill(Color(UIColor.systemGray5)))
-                    }
-                    .disabled(previewNumeric >= effectiveMax)
-
-                    Spacer()
-                }
-            }
-        }
-        .onChange(of: numericMin) { _ in clampPreviewNumeric() }
-        .onChange(of: numericMax) { _ in clampPreviewNumeric() }
-        .onChange(of: numericStep) { _ in clampPreviewNumeric() }
-        .onChange(of: hasMax) { _ in clampPreviewNumeric() }
-    }
-
-    private func clampPreviewNumeric() {
-        previewNumeric = min(max(numericMin, previewNumeric), effectiveMax)
-    }
-
-    private func commitPreviewEdit() {
-        isEditingPreviewValue = false
-        guard let val = Double(editPreviewValueText) else { return }
-        let clamped = min(max(numericMin, val), effectiveMax)
-        previewNumeric = (clamped * 100).rounded() / 100
-    }
-
-    private var previewRatingPanel: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                ForEach(0...5, id: \.self) { rating in
-                    ratingButton(rating: rating)
-                }
-            }
-            HStack(spacing: 4) {
-                ForEach(6...10, id: \.self) { rating in
-                    ratingButton(rating: rating)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func ratingButton(rating: Int) -> some View {
-        Button {
-            previewRating = previewRating == rating ? nil : rating
-        } label: {
-            Text("\(rating)")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(previewRating == rating ? .white : .primary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 30)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(previewRating == rating
-                              ? Color(UIColor.systemGreen)
-                              : Color(UIColor.systemGray5))
-                )
-        }
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: previewRating)
-    }
-
-    private var previewTextPanel: some View {
-        HStack(spacing: 8) {
-            TextField(L10n.extendedNotePlaceholder, text: $previewText)
-                .font(.system(size: 15))
-                .foregroundColor(.primary)
-                .onChange(of: previewText) { newValue in
-                    if newValue.count > AppConstants.textCharLimit {
-                        previewText = String(newValue.prefix(AppConstants.textCharLimit))
-                    }
-                }
-
-            Text("\(previewText.count)/\(AppConstants.textCharLimit)")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-        }
-    }
-
     // MARK: - Save
 
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -1024,18 +702,47 @@ struct HabitFormView: View {
         let trimmedName = String(name.trimmingCharacters(in: .whitespaces).prefix(AppConstants.habitNameMaxLength))
 
         var config: ExtendedFieldConfig?
-        if extendedEnabled {
-            config = ExtendedFieldConfig(
-                type: extendedType,
-                unit: extendedType == .numeric && !numericUnit.isEmpty ? numericUnit : nil,
-                minValue: extendedType == .numeric ? numericMin : nil,
-                maxValue: extendedType == .numeric && hasMax ? numericMax : nil,
-                step: extendedType == .numeric ? numericStep : nil,
-                inputStyle: extendedType == .numeric ? numericStyle : nil
-            )
+        if let type = selectedExtendedType {
+            switch type {
+            case .numeric:
+                let (unit, step) = resolvedNumericParams()
+                config = ExtendedFieldConfig(type: .numeric, unit: unit.isEmpty ? nil : unit, minValue: 0, maxValue: nil, step: step, inputStyle: .stepper)
+            case .text:
+                config = ExtendedFieldConfig(type: .text)
+            case .rating:
+                config = ExtendedFieldConfig(type: .rating)
+            }
         }
 
-        let workoutType = healthKitEnabled ? selectedWorkoutType.rawValue : nil
-        onSave(trimmedName, emoji, config, workoutType)
+        var workoutType: String? = nil
+        var metricType: String? = nil
+        if healthKitEnabled {
+            switch healthKitSyncMode {
+            case .workout: workoutType = selectedWorkoutType.rawValue
+            case .sleep:   metricType = HealthKitMetricType.sleep.rawValue
+            case .steps:   metricType = HealthKitMetricType.steps.rawValue
+            }
+        }
+
+        // Auto-configure extended field for metrics if not manually set
+        if metricType != nil && selectedExtendedType == nil {
+            switch healthKitSyncMode {
+            case .sleep:
+                config = ExtendedFieldConfig(type: .numeric, unit: L10n.isRu ? "мин" : "min", minValue: 0, maxValue: 1440, step: 30, inputStyle: .stepper)
+            case .steps:
+                config = ExtendedFieldConfig(type: .numeric, minValue: 0, maxValue: 100000, step: 1000, inputStyle: .stepper)
+            case .workout:
+                break
+            }
+        }
+
+        // Auto-configure extended field for distance-based workouts
+        if workoutType != nil && selectedExtendedType == nil {
+            if let wt = WorkoutType(rawValue: workoutType!), wt.hasDistance {
+                config = ExtendedFieldConfig(type: .numeric, unit: L10n.isRu ? "км" : "km", minValue: 0, step: 1, inputStyle: .stepper)
+            }
+        }
+
+        onSave(trimmedName, emoji, config, workoutType, metricType)
     }
 }

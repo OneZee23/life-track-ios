@@ -5,6 +5,37 @@
 
 ---
 
+## [0.5.0] — 24 марта 2026
+
+### Added
+- **Автосинк сна из Apple Health** — длительность сна за ночь (окно 18:00→12:00) автоматически записывается в минутах, отображается как «7ч 50м». Мёрж перекрывающихся интервалов, фильтрация по стадиям сна (core/deep/REM)
+- **Автосинк шагов из Apple Health** — точное количество шагов за день, обновляется при каждом открытии приложения
+- **Автосинк дистанции тренировок** — для вело/бег/ходьба/плавание/хайкинг автоматически записывается дистанция в км из Apple Health
+- **Детальная карточка привычки (HabitDetailView)** — long press на check-in или тап в Progress → экран с бар-чартом (220pt), avg/min/max статами, периодами 7д/30д/90д/Год, линией среднего, тапом на столбик для tooltip, и полным логом значений
+- **Навигация в детали** — доступ из Check-in (long press), DayProgress, YearAnalytics, MonthAnalytics
+- **Пресеты для числовых привычек** — вместо ручной настройки Unit/Min/Max/Step: готовые пресеты Время (мин), Кол-во (шт), Деньги (₽/$) + кастом
+- **Дизайн-система** — `DT` enum с едиными токенами (радиусы, шрифты, размеры), `.healthCard()` modifier с тенями и адаптацией dark mode, `HealthProgressBar` pill-shaped компонент
+
+### Changed
+- **Визуальный редизайн всех 7 экранов Progress** — карточки с тенями (Apple Health стиль), pill-shaped progress bars, увеличенные шрифты по единой шкале, heatmap ячейки 14→16px, score circle 72→80pt с radial gradient
+- **Форма редактирования привычки** — убран toggle Extended check-in, убраны все numeric settings (Min/Max/Slider/Stepper), убрано превью. Заменено на чипы типа + пресеты. ~400 строк кода удалено
+- **Сон хранится в минутах** — вместо часов, отображается как «Xч Yм» через `formatSleepMinutes()`
+- **Шаги без округления** — точное значение вместо округления до сотен
+- **Контрастность heatmap** — обновлены opacity уровни DayStatus (.20/.45/.70/1.0)
+- **NSHealthShareUsageDescription** — обновлено описание доступа к Apple Health
+
+### Fixed
+- **Streak в HabitDetailView** — считается на сегодня (`asOf: Date()`) вместо вчера
+- **Steps sync no-op** — не пишет в UserDefaults если значение не изменилось
+- **Миграция сна** — one-time v0.5.0, флаг ставится до мутации данных, безопасна при крэше
+
+### Removed
+- 8 неиспользуемых L10n строк (extendedCheckin, extendedMin, extendedMax, extendedSlider, extendedStepper, extendedInputStyle, extendedPreview)
+- Preview section из формы редактирования привычки
+- Numeric settings panel (Unit/Min/Max/Step/Slider-Stepper)
+
+---
+
 ## [0.4.0] — 10 марта 2026
 
 ### Added

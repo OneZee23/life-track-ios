@@ -68,11 +68,7 @@ struct MonthProgressView: View {
                 }
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 16)
     }
 
     @ViewBuilder
@@ -87,17 +83,17 @@ struct MonthProgressView: View {
             onDayTap(cell.date)
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(isFutureDate ? Color(UIColor.systemGray6) : status.color)
 
                 if today {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(Color(UIColor.systemOrange), lineWidth: 2)
                         .modifier(PulseModifier())
                 }
 
                 Text("\(cell.day)")
-                    .font(.system(size: 12, weight: today ? .bold : .medium))
+                    .font(.system(size: 13, weight: today ? .bold : .medium))
                     .foregroundColor(
                         today
                             ? (status != .none ? .white : Color(UIColor.systemOrange))
@@ -132,7 +128,7 @@ struct MonthProgressView: View {
         } label: {
             HStack {
                 Text(L10n.detailedAnalytics)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: DT.bodySize, weight: .semibold))
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
@@ -141,9 +137,10 @@ struct MonthProgressView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: DT.cardRadius)
                     .fill(Color(UIColor.systemGreen).opacity(0.1))
             )
+            .shadow(color: Color(UIColor.systemGreen).opacity(0.10), radius: 6, x: 0, y: 2)
         }
     }
 

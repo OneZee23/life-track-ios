@@ -531,20 +531,21 @@ class AppStore: ObservableObject {
 
     // MARK: - Habits
 
-    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil) {
+    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil) {
         pushUndo()
         let maxOrder = activeHabits.map { $0.sortOrder }.max() ?? -1
-        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField, healthKitWorkoutType: healthKitWorkoutType))
+        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField, healthKitWorkoutType: healthKitWorkoutType, healthKitMetricType: healthKitMetricType))
         save()
     }
 
-    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil) {
+    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil) {
         pushUndo()
         guard let idx = habits.firstIndex(where: { $0.id == id }) else { return }
         habits[idx].name = name
         habits[idx].emoji = emoji
         habits[idx].extendedField = extendedField
         habits[idx].healthKitWorkoutType = healthKitWorkoutType
+        habits[idx].healthKitMetricType = healthKitMetricType
         save()
     }
 
@@ -575,35 +576,90 @@ class AppStore: ObservableObject {
 
     @MainActor
     func syncHealthKitWorkouts() async {
-        let linked = activeHabits.filter { $0.healthKitWorkoutType != nil }
-        guard !linked.isEmpty else { return }
-
         let cal = Calendar.current
         let now = Date()
         let startOfToday = cal.startOfDay(for: now)
         let yesterday = cal.date(byAdding: .day, value: -1, to: now) ?? now
         let startOfYesterday = cal.startOfDay(for: yesterday)
-
-        let todayTypes = await healthKit.fetchWorkoutTypes(from: startOfToday, to: now)
-        let yesterdayTypes = await healthKit.fetchWorkoutTypes(from: startOfYesterday, to: startOfToday)
-
-        guard !todayTypes.isEmpty || !yesterdayTypes.isEmpty else { return }
-
-        var changed = false
         let todayStr = formatDate(now)
         let yesterdayStr = formatDate(yesterday)
+        var changed = false
 
-        for habit in linked {
-            guard let typeStr = habit.healthKitWorkoutType,
-                  let workoutType = WorkoutType(rawValue: typeStr) else { continue }
+        // MARK: - Workout sync
+        let workoutLinked = activeHabits.filter { $0.healthKitWorkoutType != nil }
+        if !workoutLinked.isEmpty {
+            let todayTypes = await healthKit.fetchWorkoutTypes(from: startOfToday, to: now)
+            let yesterdayTypes = await healthKit.fetchWorkoutTypes(from: startOfYesterday, to: startOfToday)
 
-            let hkType = HealthKitService.hkActivityType(for: workoutType)
+            for habit in workoutLinked {
+                guard let typeStr = habit.healthKitWorkoutType,
+                      let workoutType = WorkoutType(rawValue: typeStr) else { continue }
 
-            for (dateStr, types) in [(todayStr, todayTypes), (yesterdayStr, yesterdayTypes)] {
-                if types.contains(hkType.rawValue) && checkinValue(habitId: habit.id, date: dateStr) == 0 {
-                    if checkins[dateStr] == nil { checkins[dateStr] = [:] }
-                    checkins[dateStr]?[habit.id] = 1
-                    changed = true
+                let hkType = HealthKitService.hkActivityType(for: workoutType)
+
+                for (dateStr, types, rangeStart, rangeEnd) in [
+                    (todayStr, todayTypes, startOfToday, now),
+                    (yesterdayStr, yesterdayTypes, startOfYesterday, startOfToday)
+                ] {
+                    if types.contains(hkType.rawValue) && checkinValue(habitId: habit.id, date: dateStr) == 0 {
+                        if checkins[dateStr] == nil { checkins[dateStr] = [:] }
+                        checkins[dateStr]?[habit.id] = 1
+                        changed = true
+
+                        if workoutType.hasDistance {
+                            if let km = await healthKit.fetchWorkoutDistance(type: hkType, from: rangeStart, to: rangeEnd), km > 0 {
+                                if checkinExtras[dateStr] == nil { checkinExtras[dateStr] = [:] }
+                                checkinExtras[dateStr]?[habit.id] = CheckinExtra(numericValue: km)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Metric sync (sleep / steps) ---
+        let metricLinked = activeHabits.filter { $0.healthKitMetricType != nil }
+        for habit in metricLinked {
+            guard let metricStr = habit.healthKitMetricType,
+                  let metric = HealthKitMetricType(rawValue: metricStr) else { continue }
+
+            switch metric {
+            case .sleep:
+                // Sleep window: 18:00 previous day → 12:00 current day
+                let todaySleepStart = cal.date(bySettingHour: 18, minute: 0, second: 0, of: yesterday) ?? startOfYesterday
+                let todaySleepEnd = cal.date(bySettingHour: 12, minute: 0, second: 0, of: now) ?? startOfToday
+                let yesterdaySleepStart = cal.date(byAdding: .day, value: -1, to: todaySleepStart) ?? startOfYesterday
+                let yesterdaySleepEnd = cal.date(byAdding: .day, value: -1, to: todaySleepEnd) ?? startOfYesterday
+
+                for (dateStr, sleepStart, sleepEnd) in [
+                    (todayStr, todaySleepStart, todaySleepEnd),
+                    (yesterdayStr, yesterdaySleepStart, yesterdaySleepEnd)
+                ] {
+                    guard checkinValue(habitId: habit.id, date: dateStr) == 0 else { continue }
+                    if let minutes = await healthKit.fetchSleepDuration(from: sleepStart, to: sleepEnd), minutes > 0 {
+                        if checkins[dateStr] == nil { checkins[dateStr] = [:] }
+                        checkins[dateStr]?[habit.id] = 1
+                        if checkinExtras[dateStr] == nil { checkinExtras[dateStr] = [:] }
+                        checkinExtras[dateStr]?[habit.id] = CheckinExtra(numericValue: minutes)
+                        changed = true
+                    }
+                }
+
+            case .steps:
+                for (dateStr, stepStart, stepEnd) in [
+                    (todayStr, startOfToday, now),
+                    (yesterdayStr, startOfYesterday, startOfToday)
+                ] {
+                    if let steps = await healthKit.fetchStepCount(from: stepStart, to: stepEnd), steps > 0 {
+                        // Always update step value (it grows throughout the day)
+                        let existing = checkinExtras[dateStr]?[habit.id]?.numericValue
+                        if existing == steps { continue } // value unchanged, skip
+                        if checkins[dateStr] == nil { checkins[dateStr] = [:] }
+                        if checkinExtras[dateStr] == nil { checkinExtras[dateStr] = [:] }
+                        checkins[dateStr]?[habit.id] = 1
+                        checkinExtras[dateStr]?[habit.id] = CheckinExtra(numericValue: steps)
+                        changed = true
+                    }
                 }
             }
         }
@@ -796,6 +852,42 @@ class AppStore: ObservableObject {
         }
     }
 
+    // MARK: - Habit Detail Data
+
+    func habitHistory(habitId: String, days: Int) -> [(date: String, done: Bool, value: Double?)] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let habit = habits.first { $0.id == habitId }
+        var results: [(date: String, done: Bool, value: Double?)] = []
+        for i in 0..<days {
+            guard let date = cal.date(byAdding: .day, value: -i, to: today) else { continue }
+            let ds = formatDate(date)
+            let hasData = checkins[ds]?[habitId] != nil
+            let wasActive = habit.map { habitWasActive($0, on: date) } ?? false
+            // Include dates where habit was active OR has existing data (e.g. auto-synced before creation)
+            guard wasActive || hasData else { continue }
+            let done = checkinValue(habitId: habitId, date: ds) == 1
+            let value = checkinExtras[ds]?[habitId]?.numericValue
+            results.append((date: ds, done: done, value: value))
+        }
+        return results
+    }
+
+    func habitAverage(habitId: String, days: Int) -> Double? {
+        let history = habitHistory(habitId: habitId, days: days)
+        let values = history.compactMap(\.value)
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    func habitMin(habitId: String, days: Int) -> Double? {
+        habitHistory(habitId: habitId, days: days).compactMap(\.value).min()
+    }
+
+    func habitMax(habitId: String, days: Int) -> Double? {
+        habitHistory(habitId: habitId, days: days).compactMap(\.value).max()
+    }
+
     // MARK: - Persistence
 
     private func save() {
@@ -851,6 +943,36 @@ class AppStore: ObservableObject {
             notifMinute = UserDefaults.standard.integer(forKey: notifMinuteKey)
         }
         onboardingCompleted = UserDefaults.standard.bool(forKey: onboardingKey)
+
+        // Migrate sleep data: hours → minutes (v0.5.0)
+        migrateSleepToMinutes()
+    }
+
+    /// One-time migration: convert sleep numeric values from hours to minutes.
+    /// Pre-v0.5.0 stored sleep as hours (e.g. 7.5), now we store minutes (e.g. 450).
+    /// Detect by: value < 24 means it's likely hours.
+    /// One-time v0.5.0 migration: sleep hours → minutes.
+    /// Flag set BEFORE mutation so crash-restart won't double-convert.
+    /// Values < 24 are treated as hours; after ×60 they become >= 60, so re-run is safe.
+    private func migrateSleepToMinutes() {
+        let migrationKey = "lt_sleep_minutes_migrated"
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+        UserDefaults.standard.set(true, forKey: migrationKey)
+
+        let sleepHabitIds = Set(habits.filter(\.isSleep).map(\.id))
+        guard !sleepHabitIds.isEmpty else { return }
+
+        var anyChanged = false
+        for (dateStr, extras) in checkinExtras {
+            for habitId in sleepHabitIds {
+                if let extra = extras[habitId], let val = extra.numericValue, val > 0 && val < 24 {
+                    checkinExtras[dateStr]?[habitId] = CheckinExtra(numericValue: val * 60)
+                    anyChanged = true
+                }
+            }
+        }
+
+        if anyChanged { save() }
     }
 
     /// Returns true if checkin data exists in UserDefaults, even if habits failed to decode.

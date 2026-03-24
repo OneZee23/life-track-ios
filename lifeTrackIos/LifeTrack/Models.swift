@@ -105,6 +105,25 @@ enum WorkoutType: String, Codable, CaseIterable {
     case dance
     case martialArts
     case pilates
+
+    /// Workout types that record distance in Apple Health.
+    var hasDistance: Bool {
+        switch self {
+        case .cycling, .running, .walking, .swimming, .hiking: return true
+        case .yoga, .strengthTraining, .dance, .martialArts, .pilates: return false
+        }
+    }
+}
+
+enum NumericPreset: String, CaseIterable {
+    case time, count, money, custom
+}
+
+// MARK: - HealthKit Metric Type (sleep / steps)
+
+enum HealthKitMetricType: String, Codable, CaseIterable {
+    case sleep
+    case steps
 }
 
 // MARK: - Habit
@@ -118,8 +137,11 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
     var deletedAt: Date?
     var extendedField: ExtendedFieldConfig?
     var healthKitWorkoutType: String?
+    var healthKitMetricType: String?
 
     var isDeleted: Bool { deletedAt != nil }
+    var isSleep: Bool { healthKitMetricType == HealthKitMetricType.sleep.rawValue }
+    var isHealthKitLinked: Bool { healthKitWorkoutType != nil || healthKitMetricType != nil }
     var isNew: Bool {
         Calendar.current.dateComponents([.day], from: createdAt, to: Date()).day ?? 99 <= 1
     }
@@ -132,7 +154,8 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         createdAt: Date = Date(),
         deletedAt: Date? = nil,
         extendedField: ExtendedFieldConfig? = nil,
-        healthKitWorkoutType: String? = nil
+        healthKitWorkoutType: String? = nil,
+        healthKitMetricType: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -142,11 +165,12 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         self.deletedAt = deletedAt
         self.extendedField = extendedField
         self.healthKitWorkoutType = healthKitWorkoutType
+        self.healthKitMetricType = healthKitMetricType
     }
 
     // Required: Swift does not synthesize CodingKeys when init(from:) is custom
     enum CodingKeys: String, CodingKey {
-        case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField, healthKitWorkoutType
+        case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField, healthKitWorkoutType, healthKitMetricType
     }
 
     init(from decoder: Decoder) throws {
@@ -159,6 +183,7 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         deletedAt            = try c.decodeIfPresent(Date.self, forKey: .deletedAt)
         extendedField        = try c.decodeIfPresent(ExtendedFieldConfig.self, forKey: .extendedField)
         healthKitWorkoutType = try c.decodeIfPresent(String.self, forKey: .healthKitWorkoutType)
+        healthKitMetricType  = try c.decodeIfPresent(String.self, forKey: .healthKitMetricType)
     }
 }
 
@@ -180,9 +205,9 @@ enum DayStatus: Int, Equatable, Comparable {
     var color: Color {
         switch self {
         case .none:   return Color(UIColor.systemGray5)
-        case .low:    return Color(UIColor.systemGreen).opacity(0.25)
-        case .medium: return Color(UIColor.systemGreen).opacity(0.50)
-        case .high:   return Color(UIColor.systemGreen).opacity(0.75)
+        case .low:    return Color(UIColor.systemGreen).opacity(0.20)
+        case .medium: return Color(UIColor.systemGreen).opacity(0.45)
+        case .high:   return Color(UIColor.systemGreen).opacity(0.70)
         case .full:   return Color(UIColor.systemGreen)
         }
     }

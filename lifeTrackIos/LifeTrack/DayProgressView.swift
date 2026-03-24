@@ -5,12 +5,19 @@ struct DayProgressView: View {
 
     let date: Date
     let onDayChange: (Date) -> Void
+    var onHabitTap: ((Habit) -> Void)? = nil
 
     private var dateStr: String { formatDate(date) }
     private var today: Bool { isToday(date) }
 
     private var visibleHabits: [Habit] {
-        store.habitsExisted(from: date, to: date)
+        let existed = store.habitsExisted(from: date, to: date)
+        let existedIds = Set(existed.map { $0.id })
+        // Also include habits that have check-in data for this date (e.g. auto-synced metrics)
+        let withData = store.activeHabits.filter { habit in
+            !existedIds.contains(habit.id) && store.checkins[dateStr]?[habit.id] != nil
+        }
+        return existed + withData
     }
 
     private var doneCount: Int {
@@ -34,7 +41,7 @@ struct DayProgressView: View {
                     }
                     Spacer()
                     Text(L10n.weekdaysFull[weekdayIndex(date)])
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: DT.titleSize, weight: .bold))
                         .foregroundColor(.primary)
                     Spacer()
                     NavArrowButton(left: false) {
@@ -61,7 +68,17 @@ struct DayProgressView: View {
             // Habit list
             VStack(spacing: 6) {
                 ForEach(visibleHabits) { habit in
-                    habitRow(habit: habit)
+                    if let onHabitTap = onHabitTap {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            onHabitTap(habit)
+                        } label: {
+                            habitRow(habit: habit)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        habitRow(habit: habit)
+                    }
                 }
             }
         }
@@ -86,10 +103,16 @@ struct DayProgressView: View {
                 Circle()
                     .fill(
                         status != .none
-                            ? status.color.opacity(0.25)
-                            : Color(UIColor.systemGray5)
+                            ? RadialGradient(
+                                colors: [status.color.opacity(0.30), status.color.opacity(0.10)],
+                                center: .center, startRadius: 0, endRadius: 40
+                              )
+                            : RadialGradient(
+                                colors: [Color(UIColor.systemGray5), Color(UIColor.systemGray5)],
+                                center: .center, startRadius: 0, endRadius: 40
+                              )
                     )
-                    .frame(width: 72, height: 72)
+                    .frame(width: 80, height: 80)
                     .overlay(
                         Group {
                             if today {
@@ -101,7 +124,7 @@ struct DayProgressView: View {
                     )
 
                 Text("\(doneCount)/\(total)")
-                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .font(.system(size: 22, weight: .black, design: .rounded))
                     .foregroundColor(
                         status != .none
                             ? Color(UIColor.systemGreen)
@@ -132,15 +155,15 @@ struct DayProgressView: View {
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(done ? Color(UIColor.systemGreen).opacity(0.15) : Color(UIColor.systemGray5))
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
                     Text(habit.emoji)
-                        .font(.system(size: 18))
+                        .font(.system(size: 20))
                 }
 
                 Text(habit.name)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: DT.bodySize, weight: .semibold))
                     .foregroundColor(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -148,7 +171,7 @@ struct DayProgressView: View {
                     ZStack {
                         Circle()
                             .fill(done ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                            .frame(width: 32, height: 32)
+                            .frame(width: 34, height: 34)
                         if done {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 13, weight: .bold))
@@ -168,32 +191,21 @@ struct DayProgressView: View {
 
             // Extended data display
             if let extra = extra {
-                extraLabel(extra: extra, config: habit.extendedField)
+                extraLabel(extra: extra, config: habit.extendedField, metricType: habit.healthKitMetricType)
                     .padding(.leading, 52)
                     .padding(.top, 4)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard(padding: 16)
     }
 
-    private func formatNumeric(_ value: Double) -> String {
-        value.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", value)
-            : String(format: "%.1f", value)
-    }
-
-    private func extraLabel(extra: CheckinExtra, config: ExtendedFieldConfig?) -> some View {
+    private func extraLabel(extra: CheckinExtra, config: ExtendedFieldConfig?, metricType: String? = nil) -> some View {
         Group {
             if let numVal = extra.numericValue {
                 HStack(spacing: 4) {
                     Image(systemName: "number")
                         .font(.system(size: 10, weight: .bold))
-                    Text("\(formatNumeric(numVal)) \(config?.unit ?? "")")
+                    Text(formatNumericDisplay(numVal, unit: config?.unit ?? "", isSleep: metricType == HealthKitMetricType.sleep.rawValue))
                         .font(.system(size: 13, weight: .medium))
                 }
                 .foregroundColor(Color(UIColor.systemGreen))

@@ -7,6 +7,7 @@ struct MonthAnalyticsView: View {
     let month: Int
     let onMonthChange: (Int) -> Void
     let onWeekTap: (Date) -> Void
+    var onHabitTap: ((Habit) -> Void)? = nil
 
     private var currentYear: Int { Calendar.current.component(.year, from: Date()) }
     private var currentMonth: Int { Calendar.current.component(.month, from: Date()) - 1 }
@@ -64,27 +65,13 @@ struct MonthAnalyticsView: View {
                     .foregroundColor(Color(UIColor.systemGreen))
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(height: 8)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(UIColor.systemGreen))
-                        .frame(width: geo.size.width * CGFloat(stats.rate / 100.0), height: 8)
-                }
-            }
-            .frame(height: 8)
+            HealthProgressBar(rate: stats.rate, height: 8)
 
             Text(L10n.checkinsOf(stats.done, stats.tracked))
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
+        .healthCard()
     }
 
     // MARK: - Habit ranking
@@ -101,14 +88,20 @@ struct MonthAnalyticsView: View {
                     .textCase(.uppercase)
 
                 ForEach(Array(stats.enumerated()), id: \.offset) { _, item in
-                    habitRow(item: item)
+                    if let onHabitTap = onHabitTap {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            onHabitTap(item.habit)
+                        } label: {
+                            habitRow(item: item)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        habitRow(item: item)
+                    }
                 }
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-            )
+            .healthCard()
         }
     }
 
@@ -118,30 +111,20 @@ struct MonthAnalyticsView: View {
                 Text(item.habit.emoji)
                     .font(.system(size: 16))
                 Text(item.habit.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: DT.bodySize, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
                 Text(item.tracked > 0 ? "\(Int(item.rate))%" : "—")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .font(.system(size: DT.bodySize, weight: .bold, design: .monospaced))
                     .foregroundColor(item.rate >= 75 ? Color(UIColor.systemGreen) : .secondary)
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(height: 5)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(barColor(rate: item.rate))
-                        .frame(width: geo.size.width * CGFloat(item.rate / 100.0), height: 5)
-                }
-            }
-            .frame(height: 5)
+            HealthProgressBar(rate: item.rate)
 
             if item.tracked > 0 {
                 HStack {
                     Text(L10n.checkinsOf(item.done, item.tracked))
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundColor(Color(UIColor.systemGray3))
                     Spacer()
                 }
@@ -173,11 +156,7 @@ struct MonthAnalyticsView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-            )
+            .healthCard()
         }
     }
 
@@ -197,17 +176,7 @@ struct MonthAnalyticsView: View {
                     .foregroundColor(Color(UIColor.systemGray3))
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(UIColor.systemGray5))
-                        .frame(height: 5)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(barColor(rate: item.rate))
-                        .frame(width: geo.size.width * CGFloat(item.rate / 100.0), height: 5)
-                }
-            }
-            .frame(height: 5)
+            HealthProgressBar(rate: item.rate)
         }
     }
 

@@ -90,3 +90,21 @@ func formatValue(_ value: Double) -> String {
         : String(format: "%.1f", value)
 }
 
+/// Formats sleep duration from minutes to "Xч Yм" / "Xh Ym" format.
+func formatSleepMinutes(_ minutes: Double) -> String {
+    let totalMinutes = Int(minutes)
+    let h = totalMinutes / 60
+    let m = totalMinutes % 60
+    if m == 0 {
+        return L10n.isRu ? "\(h)ч" : "\(h)h"
+    }
+    return L10n.isRu ? "\(h)ч \(m)м" : "\(h)h \(m)m"
+}
+
+/// Formats a numeric value for display, handling sleep (minutes→hours) and units.
+func formatNumericDisplay(_ val: Double, unit: String, isSleep: Bool) -> String {
+    if isSleep { return formatSleepMinutes(val) }
+    let formatted = formatValue(val)
+    return unit.isEmpty ? formatted : "\(formatted) \(unit)"
+}
+

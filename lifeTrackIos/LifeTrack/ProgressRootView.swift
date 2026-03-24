@@ -25,6 +25,9 @@ struct ProgressRootView: View {
     @State private var navWeekStart: Date = weekStart(for: Date())
     @State private var navDay: Date = Date()
 
+    // Habit detail sheet
+    @State private var detailHabit: Habit? = nil
+
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground).ignoresSafeArea()
@@ -85,6 +88,9 @@ struct ProgressRootView: View {
                                 date: navDay,
                                 onDayChange: { date in
                                     navDay = date
+                                },
+                                onHabitTap: { habit in
+                                    detailHabit = habit
                                 }
                             )
                         case .analytics:
@@ -95,6 +101,9 @@ struct ProgressRootView: View {
                                     navMonth = month
                                     navSource = .yearAnalytics
                                     withAnimation { level = .month }
+                                },
+                                onHabitTap: { habit in
+                                    detailHabit = habit
                                 }
                             )
                         case .monthAnalytics:
@@ -112,6 +121,9 @@ struct ProgressRootView: View {
                                     navWeekStart = weekDate
                                     navSource = .monthAnalytics
                                     withAnimation { level = .week }
+                                },
+                                onHabitTap: { habit in
+                                    detailHabit = habit
                                 }
                             )
                         }
@@ -129,6 +141,10 @@ struct ProgressRootView: View {
                 navYear = Calendar.current.component(.year, from: Date())
                 navMonth = Calendar.current.component(.month, from: Date()) - 1
             }
+        }
+        .sheet(item: $detailHabit) { habit in
+            HabitDetailView(habit: habit)
+                .environmentObject(store)
         }
     }
 
@@ -246,7 +262,7 @@ struct ProgressRootView: View {
             action()
         } label: {
             Text(title)
-                .font(.system(size: 13, weight: selected ? .semibold : .medium))
+                .font(.system(size: DT.captionSize, weight: selected ? .semibold : .medium))
                 .foregroundColor(selected ? .primary : .secondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 32)

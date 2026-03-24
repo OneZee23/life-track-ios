@@ -30,6 +30,7 @@
 		AA00000000000000000000DC /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DB /* SharedComponents.swift */; };
 		AA00000000000000000000DE /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DD /* OnboardingView.swift */; };
 		AA00000000000000000000E0 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DF /* HealthKitService.swift */; };
+		AA00000000000000000000E2 /* HabitDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E1 /* HabitDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,6 +61,7 @@
 		AA00000000000000000000DB /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		AA00000000000000000000DD /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000DF /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
+		AA00000000000000000000E1 /* HabitDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +118,7 @@
 				AA00000000000000000000DB /* SharedComponents.swift */,
 				AA00000000000000000000DD /* OnboardingView.swift */,
 				AA00000000000000000000DF /* HealthKitService.swift */,
+				AA00000000000000000000E1 /* HabitDetailView.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -221,6 +224,7 @@
 				AA00000000000000000000DC /* SharedComponents.swift in Sources */,
 				AA00000000000000000000DE /* OnboardingView.swift in Sources */,
 				AA00000000000000000000E0 /* HealthKitService.swift in Sources */,
+				AA00000000000000000000E2 /* HabitDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,9 +359,9 @@
 				CODE_SIGN_ENTITLEMENTS = LifeTrack/LifeTrackDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeTrack reads your workouts to automatically check in exercise habits";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeTrack reads your workouts, sleep, and activity data to automatically track your habits";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "LifeTrack does not write any data to Apple Health";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -368,7 +372,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -385,9 +389,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = LifeTrack/LifeTrackRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeTrack reads your workouts to automatically check in exercise habits";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeTrack reads your workouts, sleep, and activity data to automatically track your habits";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "LifeTrack does not write any data to Apple Health";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -398,7 +402,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = co.onezee.lifetrack;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
