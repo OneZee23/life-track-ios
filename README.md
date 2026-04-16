@@ -3,7 +3,7 @@
 > Minimalist habit tracker for iOS. Did you do it or not?
 
 **Platform:** iOS (App Store)
-**Status:** v0.5.0 | **Started:** Feb 2026
+**Status:** v0.5.1 | **Started:** Feb 2026
 **Android version:** [life-track-android](https://github.com/OneZee23/life-track-android) (React Native)
 
 ---

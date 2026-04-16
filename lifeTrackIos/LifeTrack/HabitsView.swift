@@ -1,6 +1,7 @@
 import Combine
 import HealthKit
 import SwiftUI
+import UserNotifications
 
 private let EMOJIS = [
     "🛌","🚴","🥗","🧠","💻","📖","💪","🧘","💊","🎯",
@@ -106,8 +107,8 @@ struct HabitsView: View {
             }
         }
         .sheet(isPresented: $showAddForm) {
-            HabitFormView(mode: .add) { name, emoji, ext, wType, mType in
-                store.addHabit(name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType)
+            HabitFormView(mode: .add) { name, emoji, ext, wType, mType, reminder in
+                store.addHabit(name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType, reminder: reminder)
                 if wType != nil || mType != nil { Task { await store.syncHealthKitWorkouts() } }
                 showAddForm = false
             } onCancel: {
@@ -115,8 +116,8 @@ struct HabitsView: View {
             }
         }
         .sheet(item: $editingHabit) { habit in
-            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext, wType, mType in
-                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType)
+            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext, wType, mType, reminder in
+                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType, reminder: reminder)
                 if wType != nil || mType != nil { Task { await store.syncHealthKitWorkouts() } }
                 editingHabit = nil
             }, onCancel: {
@@ -168,6 +169,13 @@ struct HabitRow: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            if habit.reminder != nil {
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(UIColor.systemOrange))
+                    .accessibilityLabel(L10n.habitReminder)
+            }
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -184,7 +192,7 @@ enum HabitFormMode {
 
 struct HabitFormView: View {
     let mode: HabitFormMode
-    let onSave: (String, String, ExtendedFieldConfig?, String?, String?) -> Void
+    let onSave: (String, String, ExtendedFieldConfig?, String?, String?, HabitReminder?) -> Void
     let onCancel: () -> Void
     var onDelete: (() -> Void)? = nil
 
@@ -211,6 +219,14 @@ struct HabitFormView: View {
     @State private var customUnit: String = ""
     @State private var customStep: Double = 1
 
+    // Habit reminder
+    @State private var reminderEnabled = false
+    @State private var reminderStartHour = 9
+    @State private var reminderEndHour = 17
+    @State private var reminderIntervalMinutes = 60
+    @State private var reminderWeekdays: Set<Int> = Set(1...7)
+    @State private var showReminderDenied = false
+
     private var title: String {
         switch mode {
         case .add: return L10n.newHabit
@@ -218,7 +234,7 @@ struct HabitFormView: View {
         }
     }
 
-    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?, String?, String?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
+    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?, String?, String?, HabitReminder?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
         self.mode = mode
         self.onSave = onSave
         self.onCancel = onCancel
@@ -243,6 +259,13 @@ struct HabitFormView: View {
                         _customStep = State(initialValue: ext.step ?? 1)
                     }
                 }
+            }
+            if let reminder = habit.reminder {
+                _reminderEnabled = State(initialValue: true)
+                _reminderStartHour = State(initialValue: reminder.startHour)
+                _reminderEndHour = State(initialValue: reminder.endHour)
+                _reminderIntervalMinutes = State(initialValue: reminder.intervalMinutes)
+                _reminderWeekdays = State(initialValue: reminder.weekdays)
             }
         }
     }
@@ -342,6 +365,9 @@ struct HabitFormView: View {
                         if !(healthKitEnabled && healthKitSyncMode != .workout) {
                             extendedFieldSection
                         }
+
+                        // Reminder section
+                        reminderSection
 
                         // Buttons
                         HStack(spacing: 10) {
@@ -724,13 +750,13 @@ struct HabitFormView: View {
             }
         }
 
-        // Auto-configure extended field for metrics if not manually set
-        if metricType != nil && selectedExtendedType == nil {
+        // Sleep/Steps: always force the canonical config (the extended section is hidden for these)
+        if metricType != nil {
             switch healthKitSyncMode {
             case .sleep:
-                config = ExtendedFieldConfig(type: .numeric, unit: L10n.isRu ? "мин" : "min", minValue: 0, maxValue: 1440, step: 30, inputStyle: .stepper)
+                config = .sleepDefault
             case .steps:
-                config = ExtendedFieldConfig(type: .numeric, minValue: 0, maxValue: 100000, step: 1000, inputStyle: .stepper)
+                config = .stepsDefault
             case .workout:
                 break
             }
@@ -743,6 +769,220 @@ struct HabitFormView: View {
             }
         }
 
-        onSave(trimmedName, emoji, config, workoutType, metricType)
+        var reminder: HabitReminder? = nil
+        if reminderEnabled && !reminderWeekdays.isEmpty {
+            reminder = HabitReminder(
+                startHour: reminderStartHour,
+                endHour: max(reminderStartHour, reminderEndHour),
+                intervalMinutes: reminderIntervalMinutes,
+                weekdays: reminderWeekdays
+            )
+        }
+
+        onSave(trimmedName, emoji, config, workoutType, metricType, reminder)
     }
+
+    // MARK: - Reminder Section
+
+    private var reminderSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Toggle row
+            HStack {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(UIColor.systemOrange))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(.white)
+                }
+                Text(L10n.habitReminder)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Toggle("", isOn: $reminderEnabled)
+                    .labelsHidden()
+                    .tint(Color(UIColor.systemGreen))
+                    .onChange(of: reminderEnabled) { enabled in
+                        if enabled {
+                            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                                DispatchQueue.main.async {
+                                    if !granted {
+                                        reminderEnabled = false
+                                        showReminderDenied = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+            )
+
+            if reminderEnabled {
+                // Time range
+                HStack(spacing: 8) {
+                    Text(L10n.habitReminderFrom)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    hourPicker(selection: $reminderStartHour)
+                    Text(L10n.habitReminderTo)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    hourPicker(selection: $reminderEndHour)
+                    Spacer()
+                }
+                .onChange(of: reminderStartHour) { newStart in
+                    if reminderEndHour < newStart { reminderEndHour = newStart }
+                }
+
+                // Interval
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.habitReminderInterval)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                    HStack(spacing: 8) {
+                        intervalChip(minutes: 60, label: L10n.habitReminderEvery1h)
+                        intervalChip(minutes: 120, label: L10n.habitReminderEvery2h)
+                        intervalChip(minutes: 180, label: L10n.habitReminderEvery3h)
+                    }
+                }
+
+                // Weekday chips
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.habitReminderDays)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 4) {
+                        ForEach(1...7, id: \.self) { day in
+                            let selected = reminderWeekdays.contains(day)
+                            Button {
+                                if selected { reminderWeekdays.remove(day) }
+                                else { reminderWeekdays.insert(day) }
+                            } label: {
+                                Text(L10n.weekdaysShort[day - 1])
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(selected ? .white : .primary)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 36)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    // Quick toggle shortcuts
+                    HStack(spacing: 8) {
+                        Button {
+                            reminderWeekdays = Set(1...5)
+                        } label: {
+                            Text(L10n.habitReminderWeekdays)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(reminderWeekdays == Set(1...5) ? .white : .primary)
+                                .padding(.horizontal, 14)
+                                .frame(height: 32)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(reminderWeekdays == Set(1...5)
+                                              ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                                )
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            reminderWeekdays = Set(1...7)
+                        } label: {
+                            Text(L10n.habitReminderAllDays)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(reminderWeekdays == Set(1...7) ? .white : .primary)
+                                .padding(.horizontal, 14)
+                                .frame(height: 32)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(reminderWeekdays == Set(1...7)
+                                              ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                // Notification count footer
+                let previewReminder = HabitReminder(
+                    startHour: reminderStartHour,
+                    endHour: max(reminderStartHour, reminderEndHour),
+                    intervalMinutes: reminderIntervalMinutes,
+                    weekdays: reminderWeekdays
+                )
+                if previewReminder.notificationCount > 0 {
+                    Text(L10n.habitReminderCount(previewReminder.notificationCount))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: reminderEnabled)
+        .onAppear {
+            if reminderEnabled {
+                UNUserNotificationCenter.current().getNotificationSettings { settings in
+                    DispatchQueue.main.async {
+                        if settings.authorizationStatus == .denied {
+                            reminderEnabled = false
+                            showReminderDenied = true
+                        }
+                    }
+                }
+            }
+        }
+        .alert(L10n.habitReminder, isPresented: $showReminderDenied) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(L10n.habitReminderDenied)
+        }
+    }
+
+    private func hourPicker(selection: Binding<Int>) -> some View {
+        Menu {
+            ForEach(0..<24, id: \.self) { h in
+                Button(String(format: "%02d:00", h)) { selection.wrappedValue = h }
+            }
+        } label: {
+            Text(String(format: "%02d:00", selection.wrappedValue))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(Color(UIColor.systemGreen))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(UIColor.systemGreen).opacity(0.12))
+                )
+        }
+    }
+
+    private func intervalChip(minutes: Int, label: String) -> some View {
+        let selected = reminderIntervalMinutes == minutes
+        return Button {
+            reminderIntervalMinutes = minutes
+        } label: {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(selected ? .white : .primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
 }

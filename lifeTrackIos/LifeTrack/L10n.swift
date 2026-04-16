@@ -6,6 +6,14 @@ enum L10n {
         Locale.current.language.languageCode?.identifier == "ru"
     }()
 
+    /// Russian plural form: picks one/few/many based on mod10/mod100 rules.
+    static func ruPlural(_ n: Int, one: String, few: String, many: String) -> String {
+        let mod10 = n % 10, mod100 = n % 100
+        if mod10 == 1 && mod100 != 11 { return one }
+        if mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14) { return few }
+        return many
+    }
+
     // MARK: - App
 
     static var appTitle: String { "LifeTrack" }
@@ -194,15 +202,8 @@ enum L10n {
     // MARK: - Pluralization
 
     static func pluralDays(_ n: Int) -> String {
-        if isRu {
-            let mod10 = n % 10
-            let mod100 = n % 100
-            if mod10 == 1 && mod100 != 11 { return "день" }
-            if mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) { return "дня" }
-            return "дней"
-        } else {
-            return n == 1 ? "day" : "days"
-        }
+        isRu ? ruPlural(n, one: "день", few: "дня", many: "дней")
+             : (n == 1 ? "day" : "days")
     }
 
     // MARK: - Date formatting
@@ -246,6 +247,31 @@ enum L10n {
         return options.randomElement() ?? options[0]
     }
 
+    // MARK: - Habit Reminders
+
+    static var habitReminder:         String { isRu ? "Напоминания"   : "Reminders" }
+    static var habitReminderFrom:     String { isRu ? "С"             : "From" }
+    static var habitReminderTo:       String { isRu ? "До"            : "To" }
+    static var habitReminderInterval: String { isRu ? "Интервал"      : "Interval" }
+    static var habitReminderDays:     String { isRu ? "Дни"           : "Days" }
+    static var habitReminderEvery1h:  String { isRu ? "1ч"            : "1h" }
+    static var habitReminderEvery2h:  String { isRu ? "2ч"            : "2h" }
+    static var habitReminderEvery3h:  String { isRu ? "3ч"            : "3h" }
+    static var habitReminderWeekdays: String { isRu ? "Будни"         : "Weekdays" }
+    static var habitReminderAllDays:  String { isRu ? "Каждый день"   : "Every day" }
+    static var habitReminderDenied:   String { isRu ? "Разрешите уведомления в Настройках iPhone" : "Enable notifications in iPhone Settings" }
+
+    static func habitReminderBody(_ name: String) -> String {
+        isRu ? "Время отметить «\(name)»" : "Time to check in «\(name)»"
+    }
+
+    static func habitReminderCount(_ n: Int) -> String {
+        let word = isRu
+            ? ruPlural(n, one: "напоминание", few: "напоминания", many: "напоминаний")
+            : (n == 1 ? "reminder" : "reminders")
+        return isRu ? "\(n) \(word) в неделю" : "\(n) \(word) per week"
+    }
+
     // MARK: - Daily greeting
 
     static var greetingMorning: String { isRu ? "Доброе утро" : "Good morning" }
@@ -282,11 +308,8 @@ enum L10n {
     static var greetingTapToDismiss: String { isRu ? "Нажми, чтобы начать" : "Tap to start" }
 
     static func pluralHabits(_ n: Int) -> String {
-        if !isRu { return n == 1 ? "habit" : "habits" }
-        let mod10 = n % 10, mod100 = n % 100
-        if mod10 == 1 && mod100 != 11 { return "привычка" }
-        if mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14) { return "привычки" }
-        return "привычек"
+        isRu ? ruPlural(n, one: "привычка", few: "привычки", many: "привычек")
+             : (n == 1 ? "habit" : "habits")
     }
 
     // MARK: - Delete confirmation

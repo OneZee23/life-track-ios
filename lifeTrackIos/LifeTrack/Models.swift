@@ -66,6 +66,16 @@ struct ExtendedFieldConfig: Codable, Equatable, Hashable {
         step       = try c.decodeIfPresent(Double.self, forKey: .step)
         inputStyle = try c.decodeIfPresent(NumericInputStyle.self, forKey: .inputStyle)
     }
+
+    static var sleepDefault: ExtendedFieldConfig {
+        ExtendedFieldConfig(type: .numeric, unit: L10n.isRu ? "мин" : "min",
+                            minValue: 0, maxValue: 1440, step: 15, inputStyle: .stepper)
+    }
+
+    static var stepsDefault: ExtendedFieldConfig {
+        ExtendedFieldConfig(type: .numeric, minValue: 0, maxValue: 100000,
+                            step: 1000, inputStyle: .stepper)
+    }
 }
 
 struct CheckinExtra: Codable, Equatable {
@@ -126,6 +136,50 @@ enum HealthKitMetricType: String, Codable, CaseIterable {
     case steps
 }
 
+// MARK: - Habit Reminder
+
+struct HabitReminder: Codable, Equatable, Hashable {
+    var startHour: Int
+    var endHour: Int
+    var intervalMinutes: Int
+    var weekdays: Set<Int>   // ISO 8601: 1=Mon … 7=Sun
+
+    init(startHour: Int = 9, endHour: Int = 17,
+         intervalMinutes: Int = 60, weekdays: Set<Int> = Set(1...7)) {
+        self.startHour = startHour
+        self.endHour = endHour
+        self.intervalMinutes = intervalMinutes
+        self.weekdays = weekdays
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case startHour, endHour, intervalMinutes, weekdays
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        startHour       = try c.decodeIfPresent(Int.self, forKey: .startHour) ?? 9
+        endHour         = try c.decodeIfPresent(Int.self, forKey: .endHour) ?? 17
+        intervalMinutes = try c.decodeIfPresent(Int.self, forKey: .intervalMinutes) ?? 60
+        weekdays        = try c.decodeIfPresent(Set<Int>.self, forKey: .weekdays) ?? Set(1...7)
+    }
+
+    var scheduledHours: [Int] {
+        let step = max(1, intervalMinutes / 60)
+        var result: [Int] = []
+        var h = startHour
+        while h <= endHour {
+            result.append(h)
+            h += step
+        }
+        return result
+    }
+
+    var notificationCount: Int {
+        scheduledHours.count * weekdays.count
+    }
+}
+
 // MARK: - Habit
 
 struct Habit: Identifiable, Codable, Equatable, Hashable {
@@ -138,6 +192,7 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
     var extendedField: ExtendedFieldConfig?
     var healthKitWorkoutType: String?
     var healthKitMetricType: String?
+    var reminder: HabitReminder?
 
     var isDeleted: Bool { deletedAt != nil }
     var isSleep: Bool { healthKitMetricType == HealthKitMetricType.sleep.rawValue }
@@ -155,7 +210,8 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         deletedAt: Date? = nil,
         extendedField: ExtendedFieldConfig? = nil,
         healthKitWorkoutType: String? = nil,
-        healthKitMetricType: String? = nil
+        healthKitMetricType: String? = nil,
+        reminder: HabitReminder? = nil
     ) {
         self.id = id
         self.name = name
@@ -166,11 +222,12 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         self.extendedField = extendedField
         self.healthKitWorkoutType = healthKitWorkoutType
         self.healthKitMetricType = healthKitMetricType
+        self.reminder = reminder
     }
 
-    // Required: Swift does not synthesize CodingKeys when init(from:) is custom
     enum CodingKeys: String, CodingKey {
-        case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField, healthKitWorkoutType, healthKitMetricType
+        case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField,
+             healthKitWorkoutType, healthKitMetricType, reminder
     }
 
     init(from decoder: Decoder) throws {
@@ -184,6 +241,7 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         extendedField        = try c.decodeIfPresent(ExtendedFieldConfig.self, forKey: .extendedField)
         healthKitWorkoutType = try c.decodeIfPresent(String.self, forKey: .healthKitWorkoutType)
         healthKitMetricType  = try c.decodeIfPresent(String.self, forKey: .healthKitMetricType)
+        reminder             = try c.decodeIfPresent(HabitReminder.self, forKey: .reminder)
     }
 }
 

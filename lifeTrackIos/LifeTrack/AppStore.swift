@@ -52,7 +52,7 @@ class AppStore: ObservableObject {
     private let healthKit = HealthKitService()
 
     /// Increment when adding migrations.
-    private static let currentSchemaVersion = 1
+    private static let currentSchemaVersion = 2
 
     // MARK: - Undo/Redo
 
@@ -82,6 +82,7 @@ class AppStore: ObservableObject {
         checkins = snap.checkins
         checkinExtras = snap.checkinExtras
         save()
+        rescheduleAllNotifications()
     }
 
     func redo() {
@@ -91,6 +92,7 @@ class AppStore: ObservableObject {
         checkins = snap.checkins
         checkinExtras = snap.checkinExtras
         save()
+        rescheduleAllNotifications()
     }
 
     private var _activeHabitIds: Set<String>?
@@ -111,7 +113,8 @@ class AppStore: ObservableObject {
         if habits.isEmpty && !hasExistingCheckinData() {
             seedDefaults()
         }
-        if notifEnabled { scheduleDaily() }
+        let hasAnyReminders = habits.contains { $0.reminder != nil }
+        if notifEnabled || hasAnyReminders { rescheduleAllNotifications() }
     }
 
     // MARK: - CheckIns
@@ -531,14 +534,15 @@ class AppStore: ObservableObject {
 
     // MARK: - Habits
 
-    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil) {
+    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil, reminder: HabitReminder? = nil) {
         pushUndo()
         let maxOrder = activeHabits.map { $0.sortOrder }.max() ?? -1
-        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField, healthKitWorkoutType: healthKitWorkoutType, healthKitMetricType: healthKitMetricType))
+        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField, healthKitWorkoutType: healthKitWorkoutType, healthKitMetricType: healthKitMetricType, reminder: reminder))
         save()
+        rescheduleAllNotifications()
     }
 
-    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil) {
+    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil, reminder: HabitReminder? = nil) {
         pushUndo()
         guard let idx = habits.firstIndex(where: { $0.id == id }) else { return }
         habits[idx].name = name
@@ -546,7 +550,9 @@ class AppStore: ObservableObject {
         habits[idx].extendedField = extendedField
         habits[idx].healthKitWorkoutType = healthKitWorkoutType
         habits[idx].healthKitMetricType = healthKitMetricType
+        habits[idx].reminder = reminder
         save()
+        rescheduleAllNotifications()
     }
 
     func deleteHabit(id: String) {
@@ -554,6 +560,7 @@ class AppStore: ObservableObject {
         guard let idx = habits.firstIndex(where: { $0.id == id }) else { return }
         habits[idx].deletedAt = Date()
         save()
+        rescheduleAllNotifications()
     }
 
     func moveHabits(from source: IndexSet, to destination: Int) {
@@ -636,7 +643,8 @@ class AppStore: ObservableObject {
                     (yesterdayStr, yesterdaySleepStart, yesterdaySleepEnd)
                 ] {
                     guard checkinValue(habitId: habit.id, date: dateStr) == 0 else { continue }
-                    if let minutes = await healthKit.fetchSleepDuration(from: sleepStart, to: sleepEnd), minutes > 0 {
+                    if let rawMinutes = await healthKit.fetchSleepDuration(from: sleepStart, to: sleepEnd), rawMinutes > 0 {
+                        let minutes = rawMinutes.rounded()
                         if checkins[dateStr] == nil { checkins[dateStr] = [:] }
                         checkins[dateStr]?[habit.id] = 1
                         if checkinExtras[dateStr] == nil { checkinExtras[dateStr] = [:] }
@@ -693,6 +701,7 @@ class AppStore: ObservableObject {
         lang = value
         applyLanguage()
         save()
+        rescheduleAllNotifications()
     }
 
     private func applyLanguage() {
@@ -713,7 +722,7 @@ class AppStore: ObservableObject {
             center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
                 DispatchQueue.main.async {
                     if granted {
-                        self.scheduleDaily()
+                        self.rescheduleAllNotifications()
                     } else {
                         self.notifEnabled = false
                         self.save()
@@ -721,7 +730,7 @@ class AppStore: ObservableObject {
                 }
             }
         } else {
-            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            rescheduleAllNotifications()
         }
     }
 
@@ -729,28 +738,70 @@ class AppStore: ObservableObject {
         notifHour = hour
         notifMinute = minute
         save()
-        if notifEnabled { scheduleDaily() }
+        rescheduleAllNotifications()
     }
 
-    func scheduleDaily() {
+    func rescheduleAllNotifications() {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
 
-        let content = UNMutableNotificationContent()
-        content.title = L10n.appTitle
-        content.body = L10n.randomReminder()
-        content.sound = .default
+        var budget = AppConstants.maxLocalNotifications
 
-        let trigger = UNCalendarNotificationTrigger(
-            dateMatching: DateComponents(hour: notifHour, minute: notifMinute),
-            repeats: true
-        )
-        let request = UNNotificationRequest(
-            identifier: AppConstants.notificationIdentifier,
-            content: content,
-            trigger: trigger
-        )
-        center.add(request, withCompletionHandler: nil)
+        // 1. Global daily reminder
+        if notifEnabled {
+            let content = UNMutableNotificationContent()
+            content.title = L10n.appTitle
+            content.body = L10n.randomReminder()
+            content.sound = .default
+
+            let trigger = UNCalendarNotificationTrigger(
+                dateMatching: DateComponents(hour: notifHour, minute: notifMinute),
+                repeats: true
+            )
+            center.add(UNNotificationRequest(
+                identifier: AppConstants.notificationIdentifier,
+                content: content,
+                trigger: trigger
+            ))
+            budget -= 1
+        }
+
+        // 2. Per-habit reminders
+        for habit in activeHabits {
+            guard let reminder = habit.reminder, !reminder.weekdays.isEmpty else { continue }
+            let used = scheduleHabitNotifications(habit: habit, reminder: reminder, budget: budget)
+            budget -= used
+            if budget <= 0 { break }
+        }
+    }
+
+    @discardableResult
+    private func scheduleHabitNotifications(habit: Habit, reminder: HabitReminder, budget: Int) -> Int {
+        let center = UNUserNotificationCenter.current()
+        let hours = reminder.scheduledHours
+        var scheduled = 0
+
+        for weekday in reminder.weekdays.sorted() {
+            for hour in hours {
+                guard scheduled < budget else { return scheduled }
+
+                var dc = DateComponents()
+                dc.weekday = isoToAppleWeekday(weekday)
+                dc.hour = hour
+                dc.minute = 0
+
+                let content = UNMutableNotificationContent()
+                content.title = "\(habit.emoji) \(habit.name)"
+                content.body = L10n.habitReminderBody(habit.name)
+                content.sound = .default
+
+                let trigger = UNCalendarNotificationTrigger(dateMatching: dc, repeats: true)
+                let id = "lt_habit_\(habit.id)_\(weekday)_\(hour)"
+                center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+                scheduled += 1
+            }
+        }
+        return scheduled
     }
 
     // MARK: - Schema Migration
@@ -764,7 +815,9 @@ class AppStore: ObservableObject {
         if stored < 1 {
             migrateV0toV1()
         }
-        // Future: if stored < 2 { migrateV1toV2() }
+        if stored < 2 {
+            migrateV1toV2()
+        }
 
         UserDefaults.standard.set(Self.currentSchemaVersion, forKey: schemaVersionKey)
     }
@@ -848,6 +901,23 @@ class AppStore: ObservableObject {
             updated[i].createdAt = .distantPast
         }
         if let enc = try? JSONEncoder().encode(updated) {
+            ud.set(enc, forKey: habitsKey)
+        }
+    }
+
+    /// Update sleep habit config to canonical step=15 for existing users.
+    private func migrateV1toV2() {
+        let ud = UserDefaults.standard
+        guard let habitsData = ud.data(forKey: habitsKey) else { return }
+        var stored = [Habit].safeDecoded(from: habitsData)
+
+        let sleepConfig = ExtendedFieldConfig.sleepDefault
+        var changed = false
+        for i in stored.indices where stored[i].healthKitMetricType == HealthKitMetricType.sleep.rawValue {
+            stored[i].extendedField = sleepConfig
+            changed = true
+        }
+        if changed, let enc = try? JSONEncoder().encode(stored) {
             ud.set(enc, forKey: habitsKey)
         }
     }

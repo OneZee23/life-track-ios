@@ -11,6 +11,12 @@ enum AppConstants {
     static let unitMaxLength = 6
     static let daysLookback = 365
     static let notificationIdentifier = "lt_daily"
+    static let maxLocalNotifications = 64
+}
+
+/// Convert ISO 8601 weekday (1=Mon … 7=Sun) to Apple DateComponents weekday (1=Sun, 2=Mon … 7=Sat).
+func isoToAppleWeekday(_ iso: Int) -> Int {
+    (iso % 7) + 1
 }
 
 // MARK: - Formatter
