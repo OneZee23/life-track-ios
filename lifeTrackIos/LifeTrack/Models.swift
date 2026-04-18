@@ -193,6 +193,7 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
     var healthKitWorkoutType: String?
     var healthKitMetricType: String?
     var reminder: HabitReminder?
+    var targetPerDay: Int?
 
     var isDeleted: Bool { deletedAt != nil }
     var isSleep: Bool { healthKitMetricType == HealthKitMetricType.sleep.rawValue }
@@ -200,6 +201,8 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
     var isNew: Bool {
         Calendar.current.dateComponents([.day], from: createdAt, to: Date()).day ?? 99 <= 1
     }
+    var effectiveTarget: Int { targetPerDay ?? 1 }
+    var isCountBased: Bool { effectiveTarget > 1 }
 
     init(
         id: String = UUID().uuidString,
@@ -211,7 +214,8 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         extendedField: ExtendedFieldConfig? = nil,
         healthKitWorkoutType: String? = nil,
         healthKitMetricType: String? = nil,
-        reminder: HabitReminder? = nil
+        reminder: HabitReminder? = nil,
+        targetPerDay: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -223,11 +227,12 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         self.healthKitWorkoutType = healthKitWorkoutType
         self.healthKitMetricType = healthKitMetricType
         self.reminder = reminder
+        self.targetPerDay = targetPerDay
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, emoji, sortOrder, createdAt, deletedAt, extendedField,
-             healthKitWorkoutType, healthKitMetricType, reminder
+             healthKitWorkoutType, healthKitMetricType, reminder, targetPerDay
     }
 
     init(from decoder: Decoder) throws {
@@ -242,6 +247,23 @@ struct Habit: Identifiable, Codable, Equatable, Hashable {
         healthKitWorkoutType = try c.decodeIfPresent(String.self, forKey: .healthKitWorkoutType)
         healthKitMetricType  = try c.decodeIfPresent(String.self, forKey: .healthKitMetricType)
         reminder             = try c.decodeIfPresent(HabitReminder.self, forKey: .reminder)
+        targetPerDay         = try c.decodeIfPresent(Int.self, forKey: .targetPerDay)
+    }
+}
+
+// MARK: - Emoji validation
+
+extension String {
+    /// True if string is exactly one grapheme cluster representing an emoji.
+    var isSingleEmoji: Bool {
+        guard count == 1, let first = first else { return false }
+        let scalars = first.unicodeScalars
+        // 0x238C is the last ASCII-range scalar that Unicode flags as isEmoji
+        // (digits, #, * etc.). Above it or as part of a multi-scalar cluster
+        // (flags, skin-tone, ZWJ sequences) → real emoji.
+        return scalars.contains { scalar in
+            scalar.properties.isEmoji && (scalar.value > 0x238C || scalars.count > 1)
+        }
     }
 }
 

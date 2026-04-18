@@ -2,9 +2,16 @@ import SwiftUI
 
 struct HabitToggleCard: View {
     let habit: Habit
-    let isDone: Bool
+    let value: Int
     let streak: Int
     let onToggle: () -> Void
+
+    private var target: Int { habit.effectiveTarget }
+    private var isCount: Bool { habit.isCountBased }
+    private var isDone: Bool { value >= target }
+    private var progress: Double {
+        target > 0 ? min(1.0, Double(value) / Double(target)) : 0
+    }
 
     var body: some View {
         Button(action: {
@@ -24,7 +31,7 @@ struct HabitToggleCard: View {
                         .font(.system(size: 20))
                 }
 
-                // Name + streak
+                // Name + streak/progress
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 5) {
                         Text(habit.name)
@@ -56,7 +63,23 @@ struct HabitToggleCard: View {
                         }
                     }
 
-                    if streak >= 2 {
+                    if isCount {
+                        HStack(spacing: 6) {
+                            Text("\(value)/\(target)")
+                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                .foregroundColor(isDone ? Color(UIColor.systemGreen) : .secondary)
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(Color(UIColor.systemGray5))
+                                    .frame(width: 72, height: 4)
+                                Capsule()
+                                    .fill(isDone
+                                          ? Color(UIColor.systemGreen)
+                                          : Color(UIColor.systemGreen).opacity(0.6))
+                                    .frame(width: 72 * CGFloat(progress), height: 4)
+                            }
+                        }
+                    } else if streak >= 2 {
                         HStack(spacing: 3) {
                             Text("🔥")
                                 .font(.system(size: 11))
@@ -87,13 +110,17 @@ struct HabitToggleCard: View {
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
                             .transition(.scale.combined(with: .opacity))
+                    } else if isCount {
+                        Text("\(value)")
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .foregroundColor(Color(UIColor.systemGreen))
                     } else {
                         Text("—")
                             .font(.system(size: 18, weight: .light))
                             .foregroundColor(Color(UIColor.systemGray4))
                     }
                 }
-                .animation(.spring(response: 0.3, dampingFraction: 0.65), value: isDone)
+                .animation(.spring(response: 0.3, dampingFraction: 0.65), value: value)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)

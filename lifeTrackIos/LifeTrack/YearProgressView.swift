@@ -388,7 +388,7 @@ struct YearProgressView: View {
                 let ids = store.trackedHabitIds(on: d)
                 if !ids.isEmpty {
                     let dayData = store.checkins[ds] ?? [:]
-                    let dayDone = ids.filter { dayData[$0] == 1 }.count
+                    let dayDone = ids.filter { (dayData[$0] ?? 0) >= 1 }.count
                     if dayDone == ids.count { perfect += 1 }
                 }
             }

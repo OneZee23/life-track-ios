@@ -123,11 +123,17 @@ class AppStore: ObservableObject {
         checkins[date]?[habitId] ?? 0
     }
 
+    /// Soft-done: day counts as completed if at least one check-in exists.
+    /// Used by streak, day status, and analytics.
+    func isCheckedIn(habitId: String, date: String) -> Bool {
+        checkinValue(habitId: habitId, date: date) >= 1
+    }
+
     /// Возвращает nil если нет данных вообще (будущее или нет записей)
     func dayStatus(date: String, habitId: String? = nil) -> DayStatus? {
         if let hid = habitId {
             guard let v = checkins[date]?[hid] else { return nil }
-            return v == 1 ? DayStatus.full : DayStatus.none
+            return v >= 1 ? DayStatus.full : DayStatus.none
         }
 
         guard let dayData = checkins[date], !dayData.isEmpty else { return nil }
@@ -137,7 +143,7 @@ class AppStore: ObservableObject {
         let relevant = dayData.filter { relevantIds.contains($0.key) }
         guard !relevant.isEmpty else { return nil }
 
-        let done = relevant.values.filter { $0 == 1 }.count
+        let done = relevant.values.filter { $0 >= 1 }.count
         let total = relevantIds.count
         if done == 0 { return DayStatus.none }
 
@@ -159,12 +165,19 @@ class AppStore: ObservableObject {
 
     func toggleCheckin(habitId: String, date: String) {
         var dayData = checkins[date] ?? [:]
-        let wasChecked = (dayData[habitId] ?? 0) == 1
-        dayData[habitId] = wasChecked ? 0 : 1
+        let habit = habits.first { $0.id == habitId }
+        let target = max(1, habit?.effectiveTarget ?? 1)
+        let current = dayData[habitId] ?? 0
+        if target > 1 {
+            // Cycle 0→1→…→target→0: modulo (target + 1) so target itself is reachable.
+            dayData[habitId] = (current + 1) % (target + 1)
+        } else {
+            dayData[habitId] = current >= 1 ? 0 : 1
+        }
         // Ensure all active habits have explicit entries (0 if untouched)
-        for habit in activeHabits {
-            if dayData[habit.id] == nil {
-                dayData[habit.id] = 0
+        for h in activeHabits {
+            if dayData[h.id] == nil {
+                dayData[h.id] = 0
             }
         }
         checkins[date] = dayData
@@ -308,7 +321,7 @@ class AppStore: ObservableObject {
         var d = date
         while true {
             let ds = formatDate(d)
-            guard let v = checkins[ds]?[habitId], v == 1 else { break }
+            guard let v = checkins[ds]?[habitId], v >= 1 else { break }
             streak += 1
             guard let prev = cal.date(byAdding: .day, value: -1, to: d) else { break }
             d = prev
@@ -334,7 +347,7 @@ class AppStore: ObservableObject {
         guard !ids.isEmpty else { return nil }
         let ds = formatDate(y)
         let dayData = checkins[ds] ?? [:]
-        let done = ids.filter { dayData[$0] == 1 }.count
+        let done = ids.filter { (dayData[$0] ?? 0) >= 1 }.count
         return (done, ids.count)
     }
 
@@ -386,7 +399,7 @@ class AppStore: ObservableObject {
                 guard habitWasActive(habit, on: date) else { break }
 
                 let ds = formatDate(date)
-                if let v = checkins[ds]?[habit.id], v == 1 { break }
+                if let v = checkins[ds]?[habit.id], v >= 1 { break }
 
                 let trackedIds = trackedHabitIds(on: date)
                 if trackedIds.isEmpty { break }
@@ -512,7 +525,7 @@ class AppStore: ObservableObject {
                 let dayData = checkins[ds] ?? [:]
                 for id in ids {
                     habitTracked[id, default: 0] += 1
-                    if dayData[id] == 1 { habitDone[id, default: 0] += 1 }
+                    if (dayData[id] ?? 0) >= 1 { habitDone[id, default: 0] += 1 }
                 }
             }
         }
@@ -534,15 +547,15 @@ class AppStore: ObservableObject {
 
     // MARK: - Habits
 
-    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil, reminder: HabitReminder? = nil) {
+    func addHabit(name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil, reminder: HabitReminder? = nil, targetPerDay: Int? = nil) {
         pushUndo()
         let maxOrder = activeHabits.map { $0.sortOrder }.max() ?? -1
-        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField, healthKitWorkoutType: healthKitWorkoutType, healthKitMetricType: healthKitMetricType, reminder: reminder))
+        habits.append(Habit(name: name, emoji: emoji, sortOrder: maxOrder + 1, extendedField: extendedField, healthKitWorkoutType: healthKitWorkoutType, healthKitMetricType: healthKitMetricType, reminder: reminder, targetPerDay: targetPerDay))
         save()
         rescheduleAllNotifications()
     }
 
-    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil, reminder: HabitReminder? = nil) {
+    func updateHabit(id: String, name: String, emoji: String, extendedField: ExtendedFieldConfig? = nil, healthKitWorkoutType: String? = nil, healthKitMetricType: String? = nil, reminder: HabitReminder? = nil, targetPerDay: Int? = nil) {
         pushUndo()
         guard let idx = habits.firstIndex(where: { $0.id == id }) else { return }
         habits[idx].name = name
@@ -551,6 +564,7 @@ class AppStore: ObservableObject {
         habits[idx].healthKitWorkoutType = healthKitWorkoutType
         habits[idx].healthKitMetricType = healthKitMetricType
         habits[idx].reminder = reminder
+        habits[idx].targetPerDay = targetPerDay
         save()
         rescheduleAllNotifications()
     }
@@ -936,7 +950,7 @@ class AppStore: ObservableObject {
             let wasActive = habit.map { habitWasActive($0, on: date) } ?? false
             // Include dates where habit was active OR has existing data (e.g. auto-synced before creation)
             guard wasActive || hasData else { continue }
-            let done = checkinValue(habitId: habitId, date: ds) == 1
+            let done = isCheckedIn(habitId: habitId, date: ds)
             let value = checkinExtras[ds]?[habitId]?.numericValue
             results.append((date: ds, done: done, value: value))
         }

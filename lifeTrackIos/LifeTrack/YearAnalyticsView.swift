@@ -389,7 +389,7 @@ struct YearAnalyticsView: View {
                 let dayData = store.checkins[ds] ?? [:]
                 totalTracked += ids.count
                 for id in ids {
-                    if dayData[id] == 1 { totalDone += 1 }
+                    if (dayData[id] ?? 0) >= 1 { totalDone += 1 }
                 }
             }
         }
@@ -471,7 +471,7 @@ struct YearAnalyticsView: View {
                 let dayData = store.checkins[ds] ?? [:]
                 tracked += ids.count
                 for id in ids {
-                    if dayData[id] == 1 { done += 1 }
+                    if (dayData[id] ?? 0) >= 1 { done += 1 }
                 }
             }
             let rate = tracked > 0 ? Double(done) / Double(tracked) * 100.0 : 0

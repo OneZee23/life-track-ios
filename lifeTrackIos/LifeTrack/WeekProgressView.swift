@@ -6,6 +6,7 @@ struct WeekProgressView: View {
     let weekStartDate: Date
     let onWeekChange: (Date) -> Void
     let onDayTap: (Date) -> Void
+    let onHabitTap: (Habit) -> Void
 
     private var isFutureWeek: Bool {
         !days.contains(where: { !isFuture($0) || isToday($0) })
@@ -176,7 +177,7 @@ struct WeekProgressView: View {
         let dayValues: [Bool?] = days.map { day in
             if isFuture(day) && !isToday(day) { return nil }
             let ds = formatDate(day)
-            return store.checkinValue(habitId: habit.id, date: ds) == 1
+            return store.isCheckedIn(habitId: habit.id, date: ds)
         }
         let done = dayValues.compactMap { $0 }.filter { $0 }.count
         let total = dayValues.compactMap { $0 }.count
@@ -217,6 +218,11 @@ struct WeekProgressView: View {
             }
         }
         .healthCard(padding: 14)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onHabitTap(habit)
+        }
     }
 
     // MARK: - Week total

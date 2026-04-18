@@ -22,7 +22,7 @@ struct DayProgressView: View {
 
     private var doneCount: Int {
         visibleHabits.filter {
-            store.checkinValue(habitId: $0.id, date: dateStr) == 1
+            store.isCheckedIn(habitId: $0.id, date: dateStr)
         }.count
     }
 
@@ -148,7 +148,7 @@ struct DayProgressView: View {
     // MARK: - Habit row
 
     func habitRow(habit: Habit) -> some View {
-        let done = store.checkinValue(habitId: habit.id, date: dateStr) == 1
+        let done = store.isCheckedIn(habitId: habit.id, date: dateStr)
         let hasData = store.checkins[dateStr]?[habit.id] != nil
         let extra = store.getExtra(habitId: habit.id, date: dateStr)
 

@@ -81,6 +81,9 @@ struct ProgressRootView: View {
                                 onDayTap: { date in
                                     navDay = date
                                     withAnimation { level = .day }
+                                },
+                                onHabitTap: { habit in
+                                    detailHabit = habit
                                 }
                             )
                         case .day:

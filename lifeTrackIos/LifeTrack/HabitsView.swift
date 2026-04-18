@@ -107,8 +107,8 @@ struct HabitsView: View {
             }
         }
         .sheet(isPresented: $showAddForm) {
-            HabitFormView(mode: .add) { name, emoji, ext, wType, mType, reminder in
-                store.addHabit(name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType, reminder: reminder)
+            HabitFormView(mode: .add) { name, emoji, ext, wType, mType, reminder, target in
+                store.addHabit(name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType, reminder: reminder, targetPerDay: target)
                 if wType != nil || mType != nil { Task { await store.syncHealthKitWorkouts() } }
                 showAddForm = false
             } onCancel: {
@@ -116,8 +116,8 @@ struct HabitsView: View {
             }
         }
         .sheet(item: $editingHabit) { habit in
-            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext, wType, mType, reminder in
-                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType, reminder: reminder)
+            HabitFormView(mode: .edit(habit), onSave: { name, emoji, ext, wType, mType, reminder, target in
+                store.updateHabit(id: habit.id, name: name, emoji: emoji, extendedField: ext, healthKitWorkoutType: wType, healthKitMetricType: mType, reminder: reminder, targetPerDay: target)
                 if wType != nil || mType != nil { Task { await store.syncHealthKitWorkouts() } }
                 editingHabit = nil
             }, onCancel: {
@@ -192,7 +192,7 @@ enum HabitFormMode {
 
 struct HabitFormView: View {
     let mode: HabitFormMode
-    let onSave: (String, String, ExtendedFieldConfig?, String?, String?, HabitReminder?) -> Void
+    let onSave: (String, String, ExtendedFieldConfig?, String?, String?, HabitReminder?, Int?) -> Void
     let onCancel: () -> Void
     var onDelete: (() -> Void)? = nil
 
@@ -202,6 +202,8 @@ struct HabitFormView: View {
     @State private var name: String = ""
     @State private var emoji: String = "🎯"
     @State private var showEmojiPicker = false
+    @State private var showCustomEmojiSheet = false
+    @State private var customEmojiInput = ""
     @FocusState private var nameFocused: Bool
 
     // HealthKit sync
@@ -226,6 +228,13 @@ struct HabitFormView: View {
     @State private var reminderIntervalMinutes = 60
     @State private var reminderWeekdays: Set<Int> = Set(1...7)
     @State private var showReminderDenied = false
+    @State private var reminderTargetPerDay: Int = 1
+    @State private var targetWasManuallyEdited: Bool = false
+    @State private var reminderDaysMode: ReminderDaysMode = .everyDay
+
+    enum ReminderDaysMode {
+        case weekdays, everyDay, custom
+    }
 
     private var title: String {
         switch mode {
@@ -234,7 +243,7 @@ struct HabitFormView: View {
         }
     }
 
-    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?, String?, String?, HabitReminder?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
+    init(mode: HabitFormMode, onSave: @escaping (String, String, ExtendedFieldConfig?, String?, String?, HabitReminder?, Int?) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
         self.mode = mode
         self.onSave = onSave
         self.onCancel = onCancel
@@ -266,6 +275,15 @@ struct HabitFormView: View {
                 _reminderEndHour = State(initialValue: reminder.endHour)
                 _reminderIntervalMinutes = State(initialValue: reminder.intervalMinutes)
                 _reminderWeekdays = State(initialValue: reminder.weekdays)
+                let mode: ReminderDaysMode
+                if reminder.weekdays == Set(1...5) { mode = .weekdays }
+                else if reminder.weekdays == Set(1...7) { mode = .everyDay }
+                else { mode = .custom }
+                _reminderDaysMode = State(initialValue: mode)
+            }
+            if let t = habit.targetPerDay {
+                _reminderTargetPerDay = State(initialValue: t)
+                _targetWasManuallyEdited = State(initialValue: true)
             }
         }
     }
@@ -352,6 +370,24 @@ struct HabitFormView: View {
                                         .frame(height: 50)
                                     }
                                 }
+                                // Custom emoji cell
+                                Button {
+                                    customEmojiInput = ""
+                                    showCustomEmojiSheet = true
+                                } label: {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color(UIColor.secondarySystemGroupedBackground))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .strokeBorder(Color(UIColor.systemGray5), lineWidth: 1)
+                                            )
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundColor(Color(UIColor.systemGreen))
+                                    }
+                                    .frame(height: 50)
+                                }
                             }
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
@@ -434,7 +470,9 @@ struct HabitFormView: View {
                 }
             }
         }
-        .onAppear { nameFocused = true }
+        .onAppear {
+            if case .add = mode { nameFocused = true }
+        }
         .confirmationDialog(
             L10n.deleteConfirmTitle,
             isPresented: $showDeleteConfirm,
@@ -447,6 +485,16 @@ struct HabitFormView: View {
             if case .edit(let habit) = mode {
                 Text(L10n.deleteConfirmMessage(habit.emoji, habit.name))
             }
+        }
+        .sheet(isPresented: $showCustomEmojiSheet) {
+            CustomEmojiSheet(input: $customEmojiInput) { e in
+                emoji = e
+                showCustomEmojiSheet = false
+                withAnimation { showEmojiPicker = false }
+            } onCancel: {
+                showCustomEmojiSheet = false
+            }
+            .presentationDetents([.height(260)])
         }
     }
 
@@ -681,6 +729,7 @@ struct HabitFormView: View {
                                                 )
                                         )
                                 )
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
@@ -779,7 +828,27 @@ struct HabitFormView: View {
             )
         }
 
-        onSave(trimmedName, emoji, config, workoutType, metricType, reminder)
+        var targetPerDay: Int? = nil
+        if reminderEnabled && reminderTargetPerDay > 1 {
+            targetPerDay = reminderTargetPerDay
+        }
+
+        onSave(trimmedName, emoji, config, workoutType, metricType, reminder, targetPerDay)
+    }
+
+    private var reminderDailyCount: Int {
+        let preview = HabitReminder(
+            startHour: reminderStartHour,
+            endHour: max(reminderStartHour, reminderEndHour),
+            intervalMinutes: reminderIntervalMinutes,
+            weekdays: reminderWeekdays
+        )
+        return preview.scheduledHours.count
+    }
+
+    private func syncTargetIfNeeded() {
+        guard !targetWasManuallyEdited else { return }
+        reminderTargetPerDay = max(1, reminderDailyCount)
     }
 
     // MARK: - Reminder Section
@@ -813,6 +882,9 @@ struct HabitFormView: View {
                                     }
                                 }
                             }
+                            if !targetWasManuallyEdited {
+                                reminderTargetPerDay = max(1, reminderDailyCount)
+                            }
                         }
                     }
             }
@@ -838,7 +910,10 @@ struct HabitFormView: View {
                 }
                 .onChange(of: reminderStartHour) { newStart in
                     if reminderEndHour < newStart { reminderEndHour = newStart }
+                    syncTargetIfNeeded()
                 }
+                .onChange(of: reminderEndHour) { _ in syncTargetIfNeeded() }
+                .onChange(of: reminderIntervalMinutes) { _ in syncTargetIfNeeded() }
 
                 // Interval
                 VStack(alignment: .leading, spacing: 6) {
@@ -852,68 +927,44 @@ struct HabitFormView: View {
                     }
                 }
 
-                // Weekday chips
+                // Days mode + (optional) custom grid
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.habitReminderDays)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
 
-                    HStack(spacing: 4) {
-                        ForEach(1...7, id: \.self) { day in
-                            let selected = reminderWeekdays.contains(day)
-                            Button {
-                                if selected { reminderWeekdays.remove(day) }
-                                else { reminderWeekdays.insert(day) }
-                            } label: {
-                                Text(L10n.weekdaysShort[day - 1])
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(selected ? .white : .primary)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 36)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
+                    HStack(spacing: 8) {
+                        daysModeChip(.everyDay,  label: L10n.habitReminderAllDays)
+                        daysModeChip(.weekdays,  label: L10n.habitReminderWeekdays)
+                        daysModeChip(.custom,    label: L10n.habitReminderCustomDays)
                     }
 
-                    // Quick toggle shortcuts
-                    HStack(spacing: 8) {
-                        Button {
-                            reminderWeekdays = Set(1...5)
-                        } label: {
-                            Text(L10n.habitReminderWeekdays)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(reminderWeekdays == Set(1...5) ? .white : .primary)
-                                .padding(.horizontal, 14)
-                                .frame(height: 32)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(reminderWeekdays == Set(1...5)
-                                              ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                                )
+                    if reminderDaysMode == .custom {
+                        HStack(spacing: 4) {
+                            ForEach(1...7, id: \.self) { day in
+                                let selected = reminderWeekdays.contains(day)
+                                Button {
+                                    if selected { reminderWeekdays.remove(day) }
+                                    else { reminderWeekdays.insert(day) }
+                                } label: {
+                                    Text(L10n.weekdaysShort[day - 1])
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(selected ? .white : .primary)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 36)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                                        )
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            reminderWeekdays = Set(1...7)
-                        } label: {
-                            Text(L10n.habitReminderAllDays)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(reminderWeekdays == Set(1...7) ? .white : .primary)
-                                .padding(.horizontal, 14)
-                                .frame(height: 32)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(reminderWeekdays == Set(1...7)
-                                              ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
-                                )
-                        }
-                        .buttonStyle(.plain)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: reminderDaysMode)
 
                 // Notification count footer
                 let previewReminder = HabitReminder(
@@ -927,6 +978,28 @@ struct HabitFormView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
+
+                // Daily target
+                Stepper(value: $reminderTargetPerDay, in: 1...99) {
+                    HStack {
+                        Text(L10n.habitReminderTargetLabel)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(L10n.habitReminderTargetValue(reminderTargetPerDay))
+                            .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                            .foregroundColor(Color(UIColor.systemGreen))
+                    }
+                }
+                .onChange(of: reminderTargetPerDay) { _ in
+                    targetWasManuallyEdited = true
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(UIColor.secondarySystemGroupedBackground))
+                )
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: reminderEnabled)
@@ -981,8 +1054,160 @@ struct HabitFormView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
                 )
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
+    private func daysModeChip(_ mode: ReminderDaysMode, label: String) -> some View {
+        let selected = reminderDaysMode == mode
+        return Button {
+            reminderDaysMode = mode
+            switch mode {
+            case .weekdays: reminderWeekdays = Set(1...5)
+            case .everyDay: reminderWeekdays = Set(1...7)
+            case .custom:   break
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(selected ? .white : .primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(selected ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+}
+
+// MARK: - Custom Emoji Sheet
+
+private struct CustomEmojiSheet: View {
+    @Binding var input: String
+    let onConfirm: (String) -> Void
+    let onCancel: () -> Void
+
+    private var firstEmoji: String? {
+        guard let first = input.first else { return nil }
+        let s = String(first)
+        return s.isSingleEmoji ? s : nil
+    }
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 16) {
+                Text(L10n.customEmojiHint)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
+
+                EmojiTextField(
+                    text: $input,
+                    placeholder: "🙂",
+                    autoFocus: true
+                )
+                .frame(height: 72)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(UIColor.secondarySystemGroupedBackground))
+                )
+                .onChange(of: input) { v in
+                    // Reduce to a single emoji — drop trailing non-emoji input
+                    // (e.g. from a keyboard the user switched away from).
+                    guard let last = v.last else { return }
+                    let s = String(last)
+                    if s.isSingleEmoji {
+                        if v != s { input = s }
+                    } else {
+                        input = String(v.dropLast())
+                    }
+                }
+
+                Button {
+                    if let e = firstEmoji { onConfirm(e) }
+                } label: {
+                    Text(L10n.save)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(firstEmoji != nil ? .white : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(firstEmoji != nil ? Color(UIColor.systemGreen) : Color(UIColor.systemGray5))
+                        )
+                }
+                .disabled(firstEmoji == nil)
+
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+            .navigationTitle(L10n.customEmojiTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(L10n.cancel, action: onCancel)
+                        .foregroundColor(Color(UIColor.systemGreen))
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Emoji-only TextField (UIKit bridge)
+
+private struct EmojiTextField: UIViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    let autoFocus: Bool
+
+    func makeUIView(context: Context) -> _EmojiUITextField {
+        let tf = _EmojiUITextField()
+        tf.placeholder = placeholder
+        tf.font = .systemFont(ofSize: 44)
+        tf.textAlignment = .center
+        tf.tintColor = .clear
+        tf.autocorrectionType = .no
+        tf.smartDashesType = .no
+        tf.smartQuotesType = .no
+        tf.delegate = context.coordinator
+        tf.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.textChanged(_:)),
+            for: .editingChanged
+        )
+        if autoFocus {
+            DispatchQueue.main.async { tf.becomeFirstResponder() }
+        }
+        return tf
+    }
+
+    func updateUIView(_ uiView: _EmojiUITextField, context: Context) {
+        if uiView.text != text { uiView.text = text }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        let parent: EmojiTextField
+        init(_ parent: EmojiTextField) { self.parent = parent }
+        @objc func textChanged(_ tf: UITextField) {
+            parent.text = tf.text ?? ""
+        }
+    }
+}
+
+/// UITextField that forces the emoji keyboard by overriding its input mode.
+/// Falls back to the system default if the user has removed the emoji keyboard.
+private final class _EmojiUITextField: UITextField {
+    override var textInputContextIdentifier: String? { "" }
+    override var textInputMode: UITextInputMode? {
+        UITextInputMode.activeInputModes.first { $0.primaryLanguage == "emoji" }
+            ?? super.textInputMode
+    }
 }

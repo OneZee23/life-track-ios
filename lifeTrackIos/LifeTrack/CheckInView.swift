@@ -122,7 +122,10 @@ struct CheckInView: View {
         let date = day == .yesterday ? yesterday() : Date()
         let ds = formatDate(date)
         let habits = store.activeHabits
-        let done = habits.filter { store.checkinValue(habitId: $0.id, date: ds) == 1 }.count
+        let habitValues: [String: Int] = Dictionary(uniqueKeysWithValues:
+            habits.map { ($0.id, store.checkinValue(habitId: $0.id, date: ds)) }
+        )
+        let done = habits.filter { (habitValues[$0.id] ?? 0) >= $0.effectiveTarget }.count
         let tot = habits.count
 
         return ScrollView {
@@ -130,11 +133,12 @@ struct CheckInView: View {
                 // Habit cards
                 VStack(spacing: 8) {
                     ForEach(habits) { habit in
-                        let habitDone = store.checkinValue(habitId: habit.id, date: ds) == 1
+                        let currentValue = habitValues[habit.id] ?? 0
+                        let habitDone = currentValue >= habit.effectiveTarget
                         VStack(spacing: 2) {
                             HabitToggleCard(
                                 habit: habit,
-                                isDone: habitDone,
+                                value: currentValue,
                                 streak: streakForHabit(habit, date: date, isDone: habitDone),
                                 onToggle: { toggle(habitId: habit.id) }
                             )
@@ -284,7 +288,7 @@ struct CheckInView: View {
 
         // Check if all habits are now done — trigger celebration
         let newDoneCount = store.activeHabits.filter {
-            store.checkinValue(habitId: $0.id, date: dateStr) == 1
+            store.checkinValue(habitId: $0.id, date: dateStr) >= $0.effectiveTarget
         }.count
 
         if newDoneCount == total && total > 0 {
@@ -303,7 +307,7 @@ struct CheckInView: View {
         let baseStreak = store.currentStreak()
         let todayStr = formatDate(Date())
         let todayAllDone = store.activeHabits.allSatisfy {
-            store.checkinValue(habitId: $0.id, date: todayStr) == 1
+            store.checkinValue(habitId: $0.id, date: todayStr) >= $0.effectiveTarget
         }
         celebrationStreak = todayAllDone ? baseStreak + 1 : baseStreak
         celebrationMessage = L10n.randomCongrats()

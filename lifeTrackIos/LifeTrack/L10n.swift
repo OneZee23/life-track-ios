@@ -259,6 +259,7 @@ enum L10n {
     static var habitReminderEvery3h:  String { isRu ? "3ч"            : "3h" }
     static var habitReminderWeekdays: String { isRu ? "Будни"         : "Weekdays" }
     static var habitReminderAllDays:  String { isRu ? "Каждый день"   : "Every day" }
+    static var habitReminderCustomDays: String { isRu ? "Свои дни"    : "Custom" }
     static var habitReminderDenied:   String { isRu ? "Разрешите уведомления в Настройках iPhone" : "Enable notifications in iPhone Settings" }
 
     static func habitReminderBody(_ name: String) -> String {
@@ -271,6 +272,22 @@ enum L10n {
             : (n == 1 ? "reminder" : "reminders")
         return isRu ? "\(n) \(word) в неделю" : "\(n) \(word) per week"
     }
+
+    // MARK: - Daily Target
+
+    static var habitReminderTargetLabel: String { isRu ? "Цель в день" : "Daily target" }
+
+    static func habitReminderTargetValue(_ n: Int) -> String {
+        let word = isRu
+            ? ruPlural(n, one: "раз", few: "раза", many: "раз")
+            : (n == 1 ? "time" : "times")
+        return "\(n) \(word)"
+    }
+
+    // MARK: - Custom Emoji
+
+    static var customEmojiTitle: String { isRu ? "Свой эмодзи" : "Custom emoji" }
+    static var customEmojiHint:  String { isRu ? "Введите один эмодзи с клавиатуры" : "Enter one emoji from the keyboard" }
 
     // MARK: - Daily greeting
 
