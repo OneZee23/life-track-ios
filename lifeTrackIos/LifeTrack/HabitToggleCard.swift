@@ -7,6 +7,9 @@ struct HabitToggleCard: View {
     let hasNote: Bool
     let onToggle: () -> Void
     let onDecrement: () -> Void
+    let onOpenDetail: () -> Void
+
+    @State private var firePulse = false
 
     private var target: Int { habit.effectiveTarget }
     private var isCount: Bool { habit.isCountBased }
@@ -130,10 +133,19 @@ struct HabitToggleCard: View {
                 }
 
                 if hasNote {
-                    Image(systemName: "text.bubble.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color(UIColor.systemGray2))
-                        .accessibilityLabel(L10n.habitDetailNotePlaceholder)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onOpenDetail()
+                    } label: {
+                        Image(systemName: "text.bubble.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(UIColor.systemGray2))
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 4)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.habitDetailNotePlaceholder)
                 }
             }
 
@@ -145,6 +157,12 @@ struct HabitToggleCard: View {
                     if isOverflow {
                         Text("🔥")
                             .font(.system(size: 11))
+                            .scaleEffect(firePulse ? 1.18 : 1.0)
+                            .onAppear { firePulse = true }
+                            .animation(
+                                .easeInOut(duration: 0.85).repeatForever(autoreverses: true),
+                                value: firePulse
+                            )
                     }
                     ZStack(alignment: .leading) {
                         Capsule()

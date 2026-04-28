@@ -84,6 +84,10 @@ struct CheckInView: View {
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundColor(Color(UIColor.systemOrange))
                     }
+                    Text(L10n.celebrationDismissHint)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 18)
                 }
                 .multilineTextAlignment(.center)
                 .transition(.scale(scale: 0.5).combined(with: .opacity))
@@ -144,7 +148,8 @@ struct CheckInView: View {
                                 streak: streakForHabit(habit, date: date, isDone: habitDone),
                                 hasNote: store.hasNote(habitId: habit.id, date: ds),
                                 onToggle: { toggle(habitId: habit.id) },
-                                onDecrement: { decrement(habitId: habit.id) }
+                                onDecrement: { decrement(habitId: habit.id) },
+                                onOpenDetail: { selectedHabitForDetail = habit }
                             )
 
                             if habitDone && habit.extendedField != nil {

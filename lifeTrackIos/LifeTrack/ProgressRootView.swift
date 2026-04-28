@@ -27,6 +27,7 @@ struct ProgressRootView: View {
 
     // Habit detail sheet
     @State private var detailHabit: Habit? = nil
+    @State private var detailNoteDate: Date = Date()
 
     var body: some View {
         ZStack {
@@ -83,6 +84,7 @@ struct ProgressRootView: View {
                                     withAnimation { level = .day }
                                 },
                                 onHabitTap: { habit in
+                                    detailNoteDate = Date()
                                     detailHabit = habit
                                 }
                             )
@@ -93,6 +95,7 @@ struct ProgressRootView: View {
                                     navDay = date
                                 },
                                 onHabitTap: { habit in
+                                    detailNoteDate = navDay
                                     detailHabit = habit
                                 }
                             )
@@ -106,6 +109,7 @@ struct ProgressRootView: View {
                                     withAnimation { level = .month }
                                 },
                                 onHabitTap: { habit in
+                                    detailNoteDate = Date()
                                     detailHabit = habit
                                 }
                             )
@@ -126,6 +130,7 @@ struct ProgressRootView: View {
                                     withAnimation { level = .week }
                                 },
                                 onHabitTap: { habit in
+                                    detailNoteDate = Date()
                                     detailHabit = habit
                                 }
                             )
@@ -146,7 +151,7 @@ struct ProgressRootView: View {
             }
         }
         .sheet(item: $detailHabit) { habit in
-            HabitDetailView(habit: habit)
+            HabitDetailView(habit: habit, noteDate: detailNoteDate)
                 .environmentObject(store)
         }
     }

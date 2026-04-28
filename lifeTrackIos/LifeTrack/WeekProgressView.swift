@@ -181,6 +181,7 @@ struct WeekProgressView: View {
         }
         let done = dayValues.compactMap { $0 }.filter { $0 }.count
         let total = dayValues.compactMap { $0 }.count
+        let hasAnyNote = days.contains { store.hasNote(habitId: habit.id, date: formatDate($0)) }
 
         return VStack(spacing: 8) {
             HStack {
@@ -190,6 +191,11 @@ struct WeekProgressView: View {
                     Text(habit.name)
                         .font(.system(size: DT.bodySize, weight: .semibold))
                         .foregroundColor(.primary)
+                    if hasAnyNote {
+                        Image(systemName: "text.bubble.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(UIColor.systemGray2))
+                    }
                 }
                 Spacer()
                 Text("\(done)/\(total)")

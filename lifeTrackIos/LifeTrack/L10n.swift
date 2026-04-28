@@ -488,6 +488,10 @@ enum L10n {
     static var habitDetailHeatmap: String { isRu ? "Календарь" : "Calendar" }
     static var habitDetailHeatmapLess: String { isRu ? "меньше" : "less" }
     static var habitDetailHeatmapMore: String { isRu ? "больше" : "more" }
+    // Celebration overlay
+    static var celebrationDismissHint: String {
+        isRu ? "Нажми, чтобы продолжить" : "Tap to continue"
+    }
     // Note section
     static var habitDetailNoteToday:     String { isRu ? "сегодня" : "today" }
     static var habitDetailNoteYesterday: String { isRu ? "вчера" : "yesterday" }

@@ -162,10 +162,17 @@ struct DayProgressView: View {
                         .font(.system(size: 20))
                 }
 
-                Text(habit.name)
-                    .font(.system(size: DT.bodySize, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 6) {
+                    Text(habit.name)
+                        .font(.system(size: DT.bodySize, weight: .semibold))
+                        .foregroundColor(.primary)
+                    if store.hasNote(habitId: habit.id, date: dateStr) {
+                        Image(systemName: "text.bubble.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(UIColor.systemGray2))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if hasData {
                     ZStack {

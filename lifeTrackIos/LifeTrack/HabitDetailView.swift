@@ -8,9 +8,12 @@ struct HabitDetailView: View {
 
     @State private var selectedPeriod: Period = .days30
     @State private var selectedBarIndex: Int? = nil
-    @State private var noteText: String = ""
-    @State private var lastSavedNote: String = ""
-    @State private var noteSaveTask: Task<Void, Never>? = nil
+
+    // Inline-in-log note editor — only one row is expanded at a time.
+    @State private var expandedLogDate: String? = nil
+    @State private var inlineNoteText: String = ""
+    @State private var inlineLastSaved: String = ""
+    @State private var inlineSaveTask: Task<Void, Never>? = nil
 
     enum Period: Int, CaseIterable {
         case days7 = 7
@@ -111,9 +114,9 @@ struct HabitDetailView: View {
         }
     }
 
-    /// True when a separate note section is meaningful — text-extended habits
-    /// already have a per-day text field, so we hide the duplicate input there.
-    private var showsNoteSection: Bool {
+    /// True when inline note editing is meaningful in the log — text-extended
+    /// habits already have a per-day text field via ExtendedCheckinPanel.
+    private var supportsInlineNotes: Bool {
         habit.extendedField?.type != .text
     }
 
@@ -130,9 +133,6 @@ struct HabitDetailView: View {
                         heatmapSection(dd)
                     }
                     logView(dd)
-                    if showsNoteSection {
-                        noteSection
-                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
@@ -142,7 +142,7 @@ struct HabitDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(L10n.done) {
-                        flushPendingNote()
+                        flushInlineNote()
                         dismiss()
                     }
                     .font(.system(size: 15, weight: .semibold))
@@ -150,64 +150,91 @@ struct HabitDetailView: View {
                 }
             }
             .onAppear {
-                let loaded = store.getNote(habitId: habit.id, date: formatDate(noteDate)) ?? ""
-                noteText = loaded
-                lastSavedNote = loaded
+                // Auto-expand the row matching `noteDate` so the user lands
+                // directly on the day they care about (today / yesterday /
+                // a specific past day chosen from Progress).
+                if supportsInlineNotes {
+                    autoExpandTargetDate()
+                }
             }
-            .onDisappear { flushPendingNote() }
+            .onDisappear { flushInlineNote() }
         }
     }
 
-    /// Cancels any pending debounced save and writes the current note text
+    private func autoExpandTargetDate() {
+        let target = formatDate(noteDate)
+        let history = isCount
+            ? detailData.countHistory.map(\.date)
+            : detailData.history.map(\.date)
+        guard history.contains(target) else { return }
+        expandLogRow(target)
+    }
+
+    private func expandLogRow(_ date: String) {
+        flushInlineNote()
+        let loaded = store.getNote(habitId: habit.id, date: date) ?? ""
+        inlineNoteText = loaded
+        inlineLastSaved = loaded
+        expandedLogDate = date
+    }
+
+    private func collapseLogRow() {
+        flushInlineNote()
+        expandedLogDate = nil
+        inlineNoteText = ""
+        inlineLastSaved = ""
+    }
+
+    private func toggleLogRow(_ date: String) {
+        if expandedLogDate == date {
+            collapseLogRow()
+        } else {
+            expandLogRow(date)
+        }
+    }
+
+    /// Cancels any pending debounced save and writes the inline text
     /// immediately if it differs from the last persisted value.
-    private func flushPendingNote() {
-        noteSaveTask?.cancel()
-        noteSaveTask = nil
-        saveNoteIfChanged()
+    private func flushInlineNote() {
+        inlineSaveTask?.cancel()
+        inlineSaveTask = nil
+        guard let date = expandedLogDate, inlineNoteText != inlineLastSaved else { return }
+        store.setNote(habitId: habit.id, date: date, note: inlineNoteText)
+        inlineLastSaved = inlineNoteText
     }
 
-    private func saveNoteIfChanged() {
-        guard noteText != lastSavedNote else { return }
-        store.setNote(habitId: habit.id, date: formatDate(noteDate), note: noteText)
-        lastSavedNote = noteText
+    private func saveInlineNoteIfChanged() {
+        guard let date = expandedLogDate, inlineNoteText != inlineLastSaved else { return }
+        store.setNote(habitId: habit.id, date: date, note: inlineNoteText)
+        inlineLastSaved = inlineNoteText
     }
 
-    // MARK: - Note section
+    // MARK: - Inline log note editor
 
-    private var noteSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L10n.habitDetailNoteTitle(noteDateLabel))
-                .font(.system(size: DT.labelSize, weight: .semibold))
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-
-            TextField(L10n.habitDetailNotePlaceholder, text: $noteText, axis: .vertical)
-                .font(.system(size: 15))
-                .lineLimit(3...8)
-                .padding(12)
+    private var inlineNoteEditor: some View {
+        VStack(spacing: 0) {
+            TextField(L10n.habitDetailNotePlaceholder, text: $inlineNoteText, axis: .vertical)
+                .font(.system(size: 14))
+                .lineLimit(2...6)
+                .padding(10)
                 .background(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 8)
                         .fill(Color(UIColor.systemGray6))
                 )
-                .onChange(of: noteText) { _ in
+                .onChange(of: inlineNoteText) { _ in
                     // Debounce: persist 400ms after typing stops to avoid encoding
                     // the entire UserDefaults blob on every keystroke.
-                    noteSaveTask?.cancel()
-                    noteSaveTask = Task {
+                    inlineSaveTask?.cancel()
+                    inlineSaveTask = Task {
                         try? await Task.sleep(nanoseconds: 400_000_000)
                         guard !Task.isCancelled else { return }
-                        await MainActor.run { saveNoteIfChanged() }
+                        await MainActor.run { saveInlineNoteIfChanged() }
                     }
                 }
         }
-        .healthCard(padding: 16)
-    }
-
-    private var noteDateLabel: String {
-        let cal = Calendar.current
-        if cal.isDateInToday(noteDate) { return L10n.habitDetailNoteToday }
-        if cal.isDateInYesterday(noteDate) { return L10n.habitDetailNoteYesterday }
-        return formatLogDate(formatDate(noteDate))
+        .padding(.top, 4)
+        .padding(.bottom, 10)
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Header
@@ -842,11 +869,16 @@ struct HabitDetailView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(dd.countHistory.enumerated()), id: \.offset) { idx, entry in
                             countLogRow(entry: entry)
+                            if expandedLogDate == entry.date && supportsInlineNotes {
+                                inlineNoteEditor
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
                             if idx < dd.countHistory.count - 1 {
                                 Divider().padding(.leading, 12)
                             }
                         }
                     }
+                    .animation(.easeInOut(duration: 0.2), value: expandedLogDate)
                 }
             } else {
                 let data = dd.history
@@ -860,11 +892,16 @@ struct HabitDetailView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(data.enumerated()), id: \.offset) { idx, entry in
                             logRow(entry: entry)
+                            if expandedLogDate == entry.date && supportsInlineNotes {
+                                inlineNoteEditor
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
                             if idx < data.count - 1 {
                                 Divider().padding(.leading, 12)
                             }
                         }
                     }
+                    .animation(.easeInOut(duration: 0.2), value: expandedLogDate)
                 }
             }
         }
@@ -872,11 +909,18 @@ struct HabitDetailView: View {
     }
 
     private func logRow(entry: (date: String, done: Bool, value: Double?)) -> some View {
-        HStack(spacing: 10) {
+        let isExpanded = expandedLogDate == entry.date
+        return HStack(spacing: 10) {
             Text(formatLogDate(entry.date))
                 .font(.system(size: DT.bodySize, weight: .medium))
                 .foregroundColor(.primary)
                 .frame(width: 70, alignment: .leading)
+
+            if store.hasNote(habitId: habit.id, date: entry.date) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(Color(UIColor.systemGray2))
+            }
 
             Spacer()
 
@@ -893,18 +937,37 @@ struct HabitDetailView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(Color(UIColor.systemGray3))
             }
+
+            if supportsInlineNotes {
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color(UIColor.systemGray3))
+            }
         }
         .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard supportsInlineNotes else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            toggleLogRow(entry.date)
+        }
     }
 
     private func countLogRow(entry: (date: String, value: Int, target: Int)) -> some View {
         let isOverflow = entry.value > entry.target
         let isPerfect = entry.value >= entry.target
+        let isExpanded = expandedLogDate == entry.date
         return HStack(spacing: 10) {
             Text(formatLogDate(entry.date))
                 .font(.system(size: DT.bodySize, weight: .medium))
                 .foregroundColor(.primary)
                 .frame(width: 70, alignment: .leading)
+
+            if store.hasNote(habitId: habit.id, date: entry.date) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(Color(UIColor.systemGray2))
+            }
 
             Spacer()
 
@@ -921,8 +984,20 @@ struct HabitDetailView: View {
                     Text("🔥").font(.system(size: 11))
                 }
             }
+
+            if supportsInlineNotes {
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color(UIColor.systemGray3))
+            }
         }
         .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard supportsInlineNotes else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            toggleLogRow(entry.date)
+        }
     }
 
     // MARK: - Helpers
