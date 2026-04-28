@@ -73,6 +73,7 @@ struct CheckInView: View {
                     .ignoresSafeArea()
                     .transition(.opacity)
                     .contentShape(Rectangle())
+                    .onTapGesture { dismissCelebration() }
 
                 VStack(spacing: 10) {
                     Text(celebrationMessage)
@@ -111,7 +112,8 @@ struct CheckInView: View {
             SettingsView()
         }
         .sheet(item: $selectedHabitForDetail) { habit in
-            HabitDetailView(habit: habit)
+            let date = selectedDay == .yesterday ? yesterday() : Date()
+            HabitDetailView(habit: habit, noteDate: date)
                 .environmentObject(store)
         }
     }
@@ -140,7 +142,9 @@ struct CheckInView: View {
                                 habit: habit,
                                 value: currentValue,
                                 streak: streakForHabit(habit, date: date, isDone: habitDone),
-                                onToggle: { toggle(habitId: habit.id) }
+                                hasNote: store.hasNote(habitId: habit.id, date: ds),
+                                onToggle: { toggle(habitId: habit.id) },
+                                onDecrement: { decrement(habitId: habit.id) }
                             )
 
                             if habitDone && habit.extendedField != nil {
@@ -294,6 +298,21 @@ struct CheckInView: View {
         if newDoneCount == total && total > 0 {
             triggerCelebration()
         }
+    }
+
+    private func decrement(habitId: String) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+            store.decrementCheckin(habitId: habitId, date: dateStr)
+        }
+    }
+
+    private func dismissCelebration() {
+        hideTask?.cancel()
+        confettiTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showCelebration = false
+        }
+        showConfetti = false
     }
 
     private func triggerCelebration() {

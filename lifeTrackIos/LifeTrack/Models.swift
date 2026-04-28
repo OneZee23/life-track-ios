@@ -82,16 +82,21 @@ struct CheckinExtra: Codable, Equatable {
     var numericValue: Double?
     var textValue: String?
     var ratingValue: Int?
+    /// Free-form note for the day, independent of extendedField. Lets users add
+    /// context (e.g. "had half a cigarette" / "long hike instead") without
+    /// requiring a habit to have a text-type extended field.
+    var noteValue: String?
 
-    init(numericValue: Double? = nil, textValue: String? = nil, ratingValue: Int? = nil) {
+    init(numericValue: Double? = nil, textValue: String? = nil, ratingValue: Int? = nil, noteValue: String? = nil) {
         self.numericValue = numericValue
         self.textValue = textValue
         self.ratingValue = ratingValue
+        self.noteValue = noteValue
     }
 
     // Required: Swift does not synthesize CodingKeys when init(from:) is custom
     enum CodingKeys: String, CodingKey {
-        case numericValue, textValue, ratingValue
+        case numericValue, textValue, ratingValue, noteValue
     }
 
     init(from decoder: Decoder) throws {
@@ -99,6 +104,7 @@ struct CheckinExtra: Codable, Equatable {
         numericValue = try c.decodeIfPresent(Double.self, forKey: .numericValue)
         textValue    = try c.decodeIfPresent(String.self, forKey: .textValue)
         ratingValue  = try c.decodeIfPresent(Int.self, forKey: .ratingValue)
+        noteValue    = try c.decodeIfPresent(String.self, forKey: .noteValue)
     }
 }
 

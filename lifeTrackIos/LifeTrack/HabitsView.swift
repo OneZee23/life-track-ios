@@ -228,9 +228,12 @@ struct HabitFormView: View {
     @State private var reminderIntervalMinutes = 60
     @State private var reminderWeekdays: Set<Int> = Set(1...7)
     @State private var showReminderDenied = false
-    @State private var reminderTargetPerDay: Int = 1
-    @State private var targetWasManuallyEdited: Bool = false
     @State private var reminderDaysMode: ReminderDaysMode = .everyDay
+
+    // Daily target (count-based check-ins, independent of reminders)
+    @State private var useDailyTarget: Bool = false
+    @State private var dailyTargetCount: Int = 1
+    @State private var targetWasManuallyEdited: Bool = false
 
     enum ReminderDaysMode {
         case weekdays, everyDay, custom
@@ -282,7 +285,8 @@ struct HabitFormView: View {
                 _reminderDaysMode = State(initialValue: mode)
             }
             if let t = habit.targetPerDay {
-                _reminderTargetPerDay = State(initialValue: t)
+                _useDailyTarget = State(initialValue: true)
+                _dailyTargetCount = State(initialValue: t)
                 _targetWasManuallyEdited = State(initialValue: true)
             }
         }
@@ -401,6 +405,9 @@ struct HabitFormView: View {
                         if !(healthKitEnabled && healthKitSyncMode != .workout) {
                             extendedFieldSection
                         }
+
+                        // Daily target section
+                        dailyTargetSection
 
                         // Reminder section
                         reminderSection
@@ -829,8 +836,8 @@ struct HabitFormView: View {
         }
 
         var targetPerDay: Int? = nil
-        if reminderEnabled && reminderTargetPerDay > 1 {
-            targetPerDay = reminderTargetPerDay
+        if useDailyTarget && dailyTargetCount > 1 {
+            targetPerDay = dailyTargetCount
         }
 
         onSave(trimmedName, emoji, config, workoutType, metricType, reminder, targetPerDay)
@@ -847,8 +854,68 @@ struct HabitFormView: View {
     }
 
     private func syncTargetIfNeeded() {
-        guard !targetWasManuallyEdited else { return }
-        reminderTargetPerDay = max(1, reminderDailyCount)
+        guard reminderEnabled, !targetWasManuallyEdited else { return }
+        dailyTargetCount = max(1, reminderDailyCount)
+    }
+
+    // MARK: - Daily Target Section
+
+    private var dailyTargetSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(UIColor.systemGreen))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: "number")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                Text(L10n.dailyTargetToggleLabel)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Toggle("", isOn: $useDailyTarget)
+                    .labelsHidden()
+                    .tint(Color(UIColor.systemGreen))
+                    .onChange(of: useDailyTarget) { enabled in
+                        if enabled && dailyTargetCount < 2 {
+                            dailyTargetCount = 3
+                        }
+                    }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+            )
+
+            if useDailyTarget {
+                Stepper(value: $dailyTargetCount, in: 1...99) {
+                    HStack {
+                        Text(L10n.habitDailyTargetLabel)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(L10n.habitDailyTargetValue(dailyTargetCount))
+                            .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                            .foregroundColor(Color(UIColor.systemGreen))
+                    }
+                }
+                .onChange(of: dailyTargetCount) { _ in
+                    targetWasManuallyEdited = true
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(UIColor.secondarySystemGroupedBackground))
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: useDailyTarget)
     }
 
     // MARK: - Reminder Section
@@ -882,8 +949,10 @@ struct HabitFormView: View {
                                     }
                                 }
                             }
+                            // Auto-enable daily target with notification count if user hasn't customized it.
                             if !targetWasManuallyEdited {
-                                reminderTargetPerDay = max(1, reminderDailyCount)
+                                dailyTargetCount = max(1, reminderDailyCount)
+                                if dailyTargetCount > 1 { useDailyTarget = true }
                             }
                         }
                     }
@@ -978,28 +1047,6 @@ struct HabitFormView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
-
-                // Daily target
-                Stepper(value: $reminderTargetPerDay, in: 1...99) {
-                    HStack {
-                        Text(L10n.habitReminderTargetLabel)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(L10n.habitReminderTargetValue(reminderTargetPerDay))
-                            .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                            .foregroundColor(Color(UIColor.systemGreen))
-                    }
-                }
-                .onChange(of: reminderTargetPerDay) { _ in
-                    targetWasManuallyEdited = true
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(UIColor.secondarySystemGroupedBackground))
-                )
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: reminderEnabled)

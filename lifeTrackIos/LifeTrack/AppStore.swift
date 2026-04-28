@@ -169,8 +169,8 @@ class AppStore: ObservableObject {
         let target = max(1, habit?.effectiveTarget ?? 1)
         let current = dayData[habitId] ?? 0
         if target > 1 {
-            // Cycle 0→1→…→target→0: modulo (target + 1) so target itself is reachable.
-            dayData[habitId] = (current + 1) % (target + 1)
+            // Count-based: tap = +1, no upper cap (overflow above target is allowed).
+            dayData[habitId] = current + 1
         } else {
             dayData[habitId] = current >= 1 ? 0 : 1
         }
@@ -179,6 +179,18 @@ class AppStore: ObservableObject {
             if dayData[h.id] == nil {
                 dayData[h.id] = 0
             }
+        }
+        checkins[date] = dayData
+        save()
+    }
+
+    func decrementCheckin(habitId: String, date: String) {
+        var dayData = checkins[date] ?? [:]
+        let current = dayData[habitId] ?? 0
+        guard current > 0 else { return }
+        dayData[habitId] = current - 1
+        for h in activeHabits where dayData[h.id] == nil {
+            dayData[h.id] = 0
         }
         checkins[date] = dayData
         save()
@@ -203,6 +215,34 @@ class AppStore: ObservableObject {
         if checkinExtras[date]?.isEmpty == true {
             checkinExtras.removeValue(forKey: date)
         }
+        save()
+    }
+
+    // MARK: - Notes (free-form per-day note, separate from extendedField)
+
+    func getNote(habitId: String, date: String) -> String? {
+        checkinExtras[date]?[habitId]?.noteValue
+    }
+
+    func hasNote(habitId: String, date: String) -> Bool {
+        guard let note = getNote(habitId: habitId, date: date) else { return false }
+        return !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Sets/clears the per-day note. Empty/whitespace clears it.
+    /// Note text is capped at 2000 chars to keep the UserDefaults blob bounded.
+    func setNote(habitId: String, date: String, note: String) {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        var extra = checkinExtras[date]?[habitId] ?? CheckinExtra()
+        extra.noteValue = trimmed.isEmpty ? nil : String(trimmed.prefix(2000))
+
+        // If the entire extra becomes empty, drop it to keep storage clean.
+        if extra.numericValue == nil && extra.textValue == nil && extra.ratingValue == nil && extra.noteValue == nil {
+            clearExtra(habitId: habitId, date: date)
+            return
+        }
+        if checkinExtras[date] == nil { checkinExtras[date] = [:] }
+        checkinExtras[date]?[habitId] = extra
         save()
     }
 
@@ -316,12 +356,21 @@ class AppStore: ObservableObject {
     }
 
     func habitStreak(habitId: String, asOf date: Date) -> Int {
+        habitStreakWhere(habitId: habitId, asOf: date) { $0 >= 1 }
+    }
+
+    /// Walks consecutive days backwards from `date`, counting while `predicate`
+    /// holds. Single source of truth for both the soft streak (`>= 1`) and
+    /// the perfect-day streak (`>= target`).
+    private func habitStreakWhere(habitId: String,
+                                  asOf date: Date,
+                                  predicate: (Int) -> Bool) -> Int {
         let cal = Calendar.current
         var streak = 0
         var d = date
         while true {
             let ds = formatDate(d)
-            guard let v = checkins[ds]?[habitId], v >= 1 else { break }
+            guard let v = checkins[ds]?[habitId], predicate(v) else { break }
             streak += 1
             guard let prev = cal.date(byAdding: .day, value: -1, to: d) else { break }
             d = prev
@@ -970,6 +1019,35 @@ class AppStore: ObservableObject {
 
     func habitMax(habitId: String, days: Int) -> Double? {
         habitHistory(habitId: habitId, days: days).compactMap(\.value).max()
+    }
+
+    // MARK: - Count-based Habit Stats
+
+    /// Returns daily count history for a count-based habit, including the target
+    /// effective on the day the snapshot is taken. Empty value entries (days when
+    /// the habit was inactive and has no data) are filtered out.
+    func habitCountHistory(habitId: String, days: Int) -> [(date: String, value: Int, target: Int)] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        guard let habit = habits.first(where: { $0.id == habitId }) else { return [] }
+        let target = habit.effectiveTarget
+        var results: [(date: String, value: Int, target: Int)] = []
+        for i in 0..<days {
+            guard let date = cal.date(byAdding: .day, value: -i, to: today) else { continue }
+            let ds = formatDate(date)
+            let hasData = checkins[ds]?[habitId] != nil
+            let wasActive = habitWasActive(habit, on: date)
+            guard wasActive || hasData else { continue }
+            results.append((date: ds, value: checkinValue(habitId: habitId, date: ds), target: target))
+        }
+        return results
+    }
+
+    /// Streak of days where value reached the target (not just ≥1).
+    func habitPerfectStreak(habitId: String, asOf date: Date) -> Int {
+        guard let habit = habits.first(where: { $0.id == habitId }) else { return 0 }
+        let target = habit.effectiveTarget
+        return habitStreakWhere(habitId: habitId, asOf: date) { $0 >= target }
     }
 
     // MARK: - Persistence

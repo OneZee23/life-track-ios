@@ -275,9 +275,13 @@ enum L10n {
 
     // MARK: - Daily Target
 
-    static var habitReminderTargetLabel: String { isRu ? "Цель в день" : "Daily target" }
+    static var dailyTargetToggleLabel: String {
+        isRu ? "Несколько раз в день" : "Multiple times per day"
+    }
 
-    static func habitReminderTargetValue(_ n: Int) -> String {
+    static var habitDailyTargetLabel: String { isRu ? "Цель в день" : "Daily target" }
+
+    static func habitDailyTargetValue(_ n: Int) -> String {
         let word = isRu
             ? ruPlural(n, one: "раз", few: "раза", many: "раз")
             : (n == 1 ? "time" : "times")
@@ -475,6 +479,24 @@ enum L10n {
     static var habitDetailPeriod90d: String { isRu ? "90д" : "90d" }
     static var habitDetailPeriodYear: String { isRu ? "Год" : "Year" }
     static var habitDetailDays: String { isRu ? "д" : "d" }
+    // Count-habit specific
+    static var habitDetailTotal: String { isRu ? "Всего" : "Total" }
+    static var habitDetailBestDay: String { isRu ? "Лучший день" : "Best day" }
+    static var habitDetailPerfectDays: String { isRu ? "Идеальных" : "Perfect days" }
+    static var habitDetailOverflowSuffix: String { isRu ? "сверх плана" : "over goal" }
+    static var habitDetailTargetLabel: String { isRu ? "Цель" : "Target" }
+    static var habitDetailHeatmap: String { isRu ? "Календарь" : "Calendar" }
+    static var habitDetailHeatmapLess: String { isRu ? "меньше" : "less" }
+    static var habitDetailHeatmapMore: String { isRu ? "больше" : "more" }
+    // Note section
+    static var habitDetailNoteToday:     String { isRu ? "сегодня" : "today" }
+    static var habitDetailNoteYesterday: String { isRu ? "вчера" : "yesterday" }
+    static var habitDetailNotePlaceholder: String {
+        isRu ? "Добавь заметку…" : "Add a note…"
+    }
+    static func habitDetailNoteTitle(_ dateLabel: String) -> String {
+        isRu ? "Заметка на \(dateLabel)" : "Note for \(dateLabel)"
+    }
 
     // MARK: - Apple Health Sync
 
