@@ -20,6 +20,12 @@ struct ReflectionEngine {
 
     /// Top-level entry point. Returns the single Reflection to show, or nil.
     func currentReflection() -> Reflection? {
+        // Debug bypass — see Keys.debugForceWeekly. Skips master + today-shown
+        // gates and forces weekly path. Drift remains gated normally.
+        if defaults.bool(forKey: Keys.debugForceWeekly) {
+            return computeWeeklySummary()
+        }
+
         guard masterEnabled else { return nil }
         guard !isShownToday() else { return nil }
 
@@ -30,6 +36,9 @@ struct ReflectionEngine {
 
     /// Caller invokes this when the card is actually rendered on screen.
     func recordShown(_ reflection: Reflection) {
+        // Debug bypass — don't pollute real dedup state with debug-card shows.
+        if defaults.bool(forKey: Keys.debugForceWeekly) { return }
+
         defaults.set(Self.todayKey(now), forKey: Keys.todayShown)
         switch reflection {
         case .drift(let habit, _, _):
@@ -201,14 +210,18 @@ struct ReflectionEngine {
     }
 
     private func computeWeeklySummary() -> Reflection? {
-        guard isInWeeklyWindow else { return nil }
-        if defaults.bool(forKey: Keys.weeklyDisabled) { return nil }
+        let debugForce = defaults.bool(forKey: Keys.debugForceWeekly)
+
+        if !debugForce {
+            guard isInWeeklyWindow else { return nil }
+            if defaults.bool(forKey: Keys.weeklyDisabled) { return nil }
+        }
 
         let dates = priorWeekDates()
         guard let firstDay = dates.first else { return nil }
         let weekKey = Self.weekKey(firstDay)
 
-        if defaults.string(forKey: Keys.weeklySeen) == weekKey { return nil }
+        if !debugForce, defaults.string(forKey: Keys.weeklySeen) == weekKey { return nil }
 
         var fullyDone = 0
         var counted = 0
@@ -291,6 +304,12 @@ struct ReflectionEngine {
         static let weeklyDisabled = "lt_reflection_weekly_disabled"
         static let hintShown = "lt_reflection_hint_shown"
         static let masterEnabled = "lt_reflection_enabled"
+        /// Temporary debug toggle (v0.6.0 ONLY) — when true, the engine
+        /// bypasses all temporal gates (master/today-shown/window/seen)
+        /// for weekly summaries so the card can be inspected on demand.
+        /// Data integrity gates (`counted > 0`) still apply. Remove
+        /// before v0.6.1 release.
+        static let debugForceWeekly = "lt_reflection_debug_force_weekly"
 
         static func driftSeen(habitId: String) -> String {
             "lt_reflection_drift_seen_\(habitId)"

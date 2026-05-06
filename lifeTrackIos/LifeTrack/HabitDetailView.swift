@@ -14,6 +14,7 @@ struct HabitDetailView: View {
     @State private var inlineNoteText: String = ""
     @State private var inlineLastSaved: String = ""
     @State private var inlineSaveTask: Task<Void, Never>? = nil
+    @FocusState private var inlineNoteFocused: Bool
 
     enum Period: Int, CaseIterable {
         case days7 = 7
@@ -216,6 +217,7 @@ struct HabitDetailView: View {
             TextField(L10n.habitDetailNotePlaceholder, text: $inlineNoteText, axis: .vertical)
                 .font(.system(size: 14))
                 .lineLimit(2...6)
+                .focused($inlineNoteFocused)
                 .padding(10)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
@@ -229,6 +231,17 @@ struct HabitDetailView: View {
                         try? await Task.sleep(nanoseconds: 400_000_000)
                         guard !Task.isCancelled else { return }
                         await MainActor.run { saveInlineNoteIfChanged() }
+                    }
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button(L10n.done) {
+                            saveInlineNoteIfChanged()
+                            inlineNoteFocused = false
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color(UIColor.systemGreen))
                     }
                 }
         }
