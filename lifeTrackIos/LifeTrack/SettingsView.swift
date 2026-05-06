@@ -80,6 +80,24 @@ struct SettingsView: View {
                     Text(L10n.reminderFooter)
                 }
 
+                // Reflection
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { UserDefaults.standard.object(forKey: ReflectionEngine.Keys.masterEnabled) as? Bool ?? true },
+                        set: { UserDefaults.standard.set($0, forKey: ReflectionEngine.Keys.masterEnabled) }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(L10n.reflectionSettingsTitle)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.primary)
+                            Text(L10n.reflectionSettingsSubtitle)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .tint(Color(UIColor.systemGreen))
+                }
+
                 // Onboarding
                 Section {
                     Button {
