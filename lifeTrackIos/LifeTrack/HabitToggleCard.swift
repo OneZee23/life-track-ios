@@ -38,7 +38,7 @@ struct HabitToggleCard: View {
                 emojiBadge
                 detailsColumn
                 if showsDecrementButton {
-                    Color.clear.frame(width: 28, height: 28)
+                    Color.clear.frame(width: 44, height: 44)
                 }
                 indicator
             }
@@ -67,7 +67,7 @@ struct HabitToggleCard: View {
 
     /// Sits between the decrement-slot reservation in the row and the indicator
     /// circle on the right edge. Update if indicator size or row padding changes.
-    private static let decrementOverlayTrailing: CGFloat = 70
+    private static let decrementOverlayTrailing: CGFloat = 62
 
     private var cardFill: Color {
         if isOverflow { return Color(UIColor.systemPurple).opacity(0.10) }
@@ -223,14 +223,16 @@ struct HabitToggleCard: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onDecrement()
         } label: {
-            Image(systemName: "minus")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(Color(UIColor.systemGray))
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle().fill(Color(UIColor.systemGray5))
-                )
-                .contentShape(Circle())
+            ZStack {
+                Circle()
+                    .fill(Color(UIColor.systemGray5))
+                    .frame(width: 28, height: 28)
+                Image(systemName: "minus")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(UIColor.systemGray))
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .transition(.scale.combined(with: .opacity))

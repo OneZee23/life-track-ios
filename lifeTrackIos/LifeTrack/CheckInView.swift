@@ -152,7 +152,7 @@ struct CheckInView: View {
                                 onOpenDetail: { selectedHabitForDetail = habit }
                             )
 
-                            if habitDone && habit.extendedField != nil {
+                            if habit.extendedField != nil {
                                 ExtendedCheckinPanel(
                                     config: habit.extendedField!,
                                     value: store.getExtra(habitId: habit.id, date: ds),
