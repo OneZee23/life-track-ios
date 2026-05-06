@@ -150,7 +150,13 @@ struct ReflectionEngine {
         if daysSinceLast < 2 { return nil }
 
         let suggestion = suggestSmaller(habit: habit)
-        let score = (baselineRate - recentRate) / max(baselineRate, 1.0)
+        // Normalize: daily-cadence score is currentGap/threshold (typically
+        // 1.0-3.0). Raw weekly score (baseline-recent)/baseline is bounded
+        // 0-1, so a fully-abandoned weekly habit (score≈1.0) would always
+        // lose to a barely-drifting daily one. Offset by +1.0 to put weekly
+        // on the same 1.0-2.0 axis — severe weekly can still beat mild daily.
+        let rawScore = (baselineRate - recentRate) / max(baselineRate, 1.0)
+        let score = 1.0 + rawScore
         return (.drift(habit: habit, days: daysSinceLast, suggestion: suggestion), score)
     }
 
