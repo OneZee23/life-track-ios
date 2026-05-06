@@ -18,13 +18,14 @@ creation (it requires Xcode UI manipulation that's risky to script).
 
 ## What's covered
 
-14 tests for `ReflectionEngine`:
+15 tests for `ReflectionEngine`:
 
 - 7 drift cases (brand-new habit, 3-day gap fires, 1-day no-fire, 11-day no-fire, weekend skipper, cooldown, archived)
-- 5 weekly cases (zero days, seven days, outside window, mid-week-created habit, no active habits)
+- 4 weekly cases (zero days, seven days, outside window, mid-week-created habit)
+- 1 no-active-habits guard
 - 1 priority test (drift beats weekly)
 - 1 today-already-shown
 - 1 master-toggle-off
 
 If `computeWeeklySummary` (Task 5) and `computeDrift` (Task 6) implementations
-are correct, all 14 should pass once the target is wired.
+are correct, all 15 should pass once the target is wired.
