@@ -59,8 +59,132 @@ struct ReflectionEngine {
     // MARK: - Internal (will be implemented in later tasks)
 
     private func computeDrift() -> Reflection? {
-        // Implemented in Task 6
+        if defaults.bool(forKey: Keys.driftDisabled) { return nil }
+
+        var candidates: [(reflection: Reflection, score: Double)] = []
+        for habit in store.activeHabits where !habit.isDeleted {
+            if let result = evaluateDrift(habit: habit) {
+                candidates.append(result)
+            }
+        }
+        return candidates.max(by: { $0.score < $1.score })?.reflection
+    }
+
+    /// Returns the drift Reflection plus a priority score (higher = more urgent),
+    /// or nil if this habit doesn't qualify.
+    private func evaluateDrift(habit: Habit) -> (reflection: Reflection, score: Double)? {
+        let cal = Calendar.current
+
+        // Gate: 21d minimum age
+        guard let daysSinceCreated = cal.dateComponents([.day], from: habit.createdAt, to: now).day,
+              daysSinceCreated >= 21 else { return nil }
+
+        // Gate: 7d cooldown for same-habit nudge
+        if let lastShownStr = defaults.string(forKey: Keys.driftSeen(habitId: habit.id)),
+           let lastShown = Self.parseISO8601(lastShownStr),
+           let daysSinceShown = cal.dateComponents([.day], from: lastShown, to: now).day,
+           daysSinceShown < 7 {
+            return nil
+        }
+
+        // Gather last 60 days of completions
+        let completions = completionDates(habit: habit, lastNDays: 60)
+        guard completions.count >= 8 else { return nil }
+        if completions.contains(where: { cal.isDate($0, inSameDayAs: now) }) { return nil }
+
+        // Branch by cadence
+        let weeksObserved = max(1, daysSinceCreated / 7)
+        let baselineRate = Double(completions.count) / Double(min(weeksObserved, 8))
+
+        if baselineRate >= 5 {
+            return evaluateDailyCadenceDrift(habit: habit, completions: completions)
+        } else if baselineRate >= 1 {
+            return evaluateWeeklyCadenceDrift(habit: habit, completions: completions, baselineRate: baselineRate)
+        }
         return nil
+    }
+
+    private func evaluateDailyCadenceDrift(habit: Habit, completions: [Date]) -> (reflection: Reflection, score: Double)? {
+        let cal = Calendar.current
+        let sorted = completions.sorted()
+
+        var gaps: [Int] = []
+        for i in 1..<sorted.count {
+            if let g = cal.dateComponents([.day], from: sorted[i-1], to: sorted[i]).day, g > 0 {
+                gaps.append(g)
+            }
+        }
+        guard gaps.count >= 6 else { return nil }
+
+        let med = median(gaps.map(Double.init))
+        let mad = median(gaps.map { abs(Double($0) - med) })
+        let threshold = max(med + 3.0 * 1.4826 * mad, med + 2.0)
+
+        guard let last = sorted.last,
+              let currentGap = cal.dateComponents([.day], from: last, to: now).day else { return nil }
+        if currentGap < 2 { return nil }
+        if currentGap > 10 { return nil }
+        if Double(currentGap) < threshold { return nil }
+
+        let suggestion = suggestSmaller(habit: habit)
+        let score = Double(currentGap) / max(threshold, 1.0)
+        return (.drift(habit: habit, days: currentGap, suggestion: suggestion), score)
+    }
+
+    private func evaluateWeeklyCadenceDrift(habit: Habit, completions: [Date], baselineRate: Double) -> (reflection: Reflection, score: Double)? {
+        let cal = Calendar.current
+        guard let twoWeeksAgo = cal.date(byAdding: .day, value: -14, to: now) else { return nil }
+        let recent = completions.filter { $0 >= twoWeeksAgo }
+        let recentRate = Double(recent.count) / 2.0  // per week
+
+        guard recentRate <= 0.5 * baselineRate, recentRate < baselineRate - 1 else { return nil }
+        guard let last = completions.sorted().last,
+              let daysSinceLast = cal.dateComponents([.day], from: last, to: now).day else { return nil }
+        if daysSinceLast < 2 { return nil }
+
+        let suggestion = suggestSmaller(habit: habit)
+        let score = (baselineRate - recentRate) / max(baselineRate, 1.0)
+        return (.drift(habit: habit, days: daysSinceLast, suggestion: suggestion), score)
+    }
+
+    // MARK: - Drift compute helpers
+
+    private func completionDates(habit: Habit, lastNDays: Int) -> [Date] {
+        let cal = Calendar.current
+        var dates: [Date] = []
+        for offset in 0..<lastNDays {
+            guard let d = cal.date(byAdding: .day, value: -offset, to: now) else { continue }
+            let ds = Self.iso8601DateString(d)
+            if store.checkinValue(habitId: habit.id, date: ds) >= habit.effectiveTarget {
+                dates.append(d)
+            }
+        }
+        return dates
+    }
+
+    private func suggestSmaller(habit: Habit) -> DriftSuggestion {
+        if let cfg = habit.extendedField,
+           cfg.type == .numeric,
+           let step = cfg.step,
+           let unit = cfg.unit, !unit.isEmpty {
+            return .smallerNumeric(value: step, unit: unit)
+        }
+        return .smallestVariant
+    }
+
+    private func median(_ xs: [Double]) -> Double {
+        let s = xs.sorted()
+        guard !s.isEmpty else { return 0 }
+        let n = s.count
+        return n % 2 == 1 ? s[n/2] : (s[n/2 - 1] + s[n/2]) / 2.0
+    }
+
+    static func parseISO8601(_ s: String) -> Date? {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .iso8601)
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        return f.date(from: s)
     }
 
     private func computeWeeklySummary() -> Reflection? {
