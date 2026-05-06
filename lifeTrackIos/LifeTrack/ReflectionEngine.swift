@@ -3,8 +3,8 @@ import Foundation
 /// Pure computer that decides whether to surface a Reflection now.
 ///
 /// Stateless from the engine's POV — all persistence reads/writes go through
-/// `defaults`. Tests inject a custom UserDefaults via `init(suite:)` to avoid
-/// polluting the real app domain.
+/// `defaults`. Tests inject a custom `UserDefaults` (e.g. one created with
+/// `UserDefaults(suiteName:)`) to avoid polluting the real app domain.
 struct ReflectionEngine {
     let store: AppStore
     let now: Date
@@ -39,7 +39,11 @@ struct ReflectionEngine {
         }
     }
 
-    /// "Скрыть на неделю" via long-press menu — same as recordShown.
+    /// "Скрыть на неделю" via long-press menu. Implementation is identical to
+    /// `recordShown` — both write the per-habit drift date / per-week weekly
+    /// bucket. The 7-day cooldown for drift and the next-bucket-only check for
+    /// weekly are enforced at evaluation time in `computeDrift` /
+    /// `computeWeeklySummary`, not here.
     func dismissForWeek(_ reflection: Reflection) {
         recordShown(reflection)
     }
