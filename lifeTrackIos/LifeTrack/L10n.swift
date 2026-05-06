@@ -401,28 +401,6 @@ enum L10n {
         isRu ? "Показать онбординг" : "Show onboarding"
     }
 
-    // MARK: - Compassionate Coach
-
-    static var coachMissed1: String {
-        isRu ? "У всех бывает. Прогресс не потерян." : "Everyone has off days. Your progress is still here."
-    }
-
-    static var coachMissed2: String {
-        isRu ? "Ты здесь — это уже шаг." : "You're here — that's already a step."
-    }
-
-    static var coachMissed4: String {
-        isRu ? "Маленький шаг лучше стоять на месте." : "A small step beats standing still."
-    }
-
-    static var coachMissed7: String {
-        isRu ? "Каждый момент — шанс начать заново." : "Every moment is a chance to start fresh."
-    }
-
-    static func coachHabitNudge(_ name: String) -> String {
-        isRu ? "Привычка «\(name)» ждёт тебя" : "«\(name)» is waiting for you"
-    }
-
     // MARK: - Extended Check-in
 
     static var extendedNumeric: String {

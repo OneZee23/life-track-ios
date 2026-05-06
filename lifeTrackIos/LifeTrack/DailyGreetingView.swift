@@ -7,9 +7,6 @@ struct DailyGreetingView: View {
 
     private var streak: Int { store.currentStreak() }
     private var habitCount: Int { store.activeHabits.count }
-    private var coach: String? { store.coachMessage() }
-    private var coachEmoji: String { store.coachEmoji() }
-    private var missedHabit: Habit? { store.longestMissedHabit() }
 
     private var yesterdayText: String {
         if let stats = store.yesterdayStats() {
@@ -32,28 +29,14 @@ struct DailyGreetingView: View {
                 }
 
             VStack(spacing: 16) {
-                Text(coach != nil ? coachEmoji : L10n.greetingEmoji())
+                Text(L10n.greetingEmoji())
                     .font(.system(size: 56))
 
                 Text(L10n.greeting())
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
 
-                if let message = coach {
-                    Text(message)
-                        .font(.system(size: 17, weight: .medium, design: .rounded))
-                        .foregroundColor(Color(UIColor.systemOrange))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 4)
-
-                    if let habit = missedHabit {
-                        Text("\(habit.emoji) \(L10n.coachHabitNudge(habit.name))")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(Color(UIColor.systemOrange).opacity(0.8))
-                            .padding(.top, 2)
-                    }
-                } else if streak >= 2 {
+                if streak >= 2 {
                     Text("\u{1F525} \(streak) \(L10n.pluralDays(streak)) \(L10n.inARow)")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(Color(UIColor.systemOrange))
