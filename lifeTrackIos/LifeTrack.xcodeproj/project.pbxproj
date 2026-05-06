@@ -34,6 +34,7 @@
 		BB00000000000000000000B1 /* Reflection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A1 /* Reflection.swift */; };
 		BB00000000000000000000B2 /* ReflectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A2 /* ReflectionEngine.swift */; };
 		BB00000000000000000000B3 /* ReflectionCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A3 /* ReflectionCopy.swift */; };
+		BB00000000000000000000B4 /* ReflectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A4 /* ReflectionCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -68,6 +69,7 @@
 		BB00000000000000000000A1 /* Reflection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reflection.swift; sourceTree = "<group>"; };
 		BB00000000000000000000A2 /* ReflectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionEngine.swift; sourceTree = "<group>"; };
 		BB00000000000000000000A3 /* ReflectionCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionCopy.swift; sourceTree = "<group>"; };
+		BB00000000000000000000A4 /* ReflectionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +130,7 @@
 				BB00000000000000000000A1 /* Reflection.swift */,
 				BB00000000000000000000A2 /* ReflectionEngine.swift */,
 				BB00000000000000000000A3 /* ReflectionCopy.swift */,
+				BB00000000000000000000A4 /* ReflectionCard.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -237,6 +240,7 @@
 				BB00000000000000000000B1 /* Reflection.swift in Sources */,
 				BB00000000000000000000B2 /* ReflectionEngine.swift in Sources */,
 				BB00000000000000000000B3 /* ReflectionCopy.swift in Sources */,
+				BB00000000000000000000B4 /* ReflectionCard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
