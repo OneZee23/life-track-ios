@@ -64,8 +64,69 @@ struct ReflectionEngine {
     }
 
     private func computeWeeklySummary() -> Reflection? {
-        // Implemented in Task 5
-        return nil
+        guard isInWeeklyWindow else { return nil }
+        if defaults.bool(forKey: Keys.weeklyDisabled) { return nil }
+
+        let dates = priorWeekDates()
+        guard let firstDay = dates.first else { return nil }
+        let weekKey = Self.weekKey(firstDay)
+
+        if defaults.string(forKey: Keys.weeklySeen) == weekKey { return nil }
+
+        var fullyDone = 0
+        var counted = 0
+        for d in dates {
+            let activeHabits = store.habitsExisted(from: d, to: d)
+            guard !activeHabits.isEmpty else { continue }
+            counted += 1
+            let ds = Self.iso8601DateString(d)
+            let allDone = activeHabits.allSatisfy { habit in
+                store.checkinValue(habitId: habit.id, date: ds) >= habit.effectiveTarget
+            }
+            if allDone { fullyDone += 1 }
+        }
+
+        guard counted > 0 else { return nil }
+        return .weekly(daysFullyDone: fullyDone, daysCounted: counted, weekKey: weekKey)
+    }
+
+    // MARK: - Weekly window
+
+    /// True when `now` is within Sunday 18:00 → Tuesday 23:59 (local time).
+    /// ISO calendar weekday: Sun=1, Mon=2, Tue=3.
+    private var isInWeeklyWindow: Bool {
+        var cal = Calendar(identifier: .iso8601)
+        cal.firstWeekday = 2
+        cal.timeZone = .current
+        let weekday = cal.component(.weekday, from: now)
+        let hour = cal.component(.hour, from: now)
+        if weekday == 1 && hour >= 18 { return true }
+        if weekday == 2 { return true }
+        if weekday == 3 { return true }
+        return false
+    }
+
+    /// Returns Mon..Sun dates of the most recently *completed* ISO week
+    /// relative to `now`. Sunday ≥18:00 belongs to the just-ending week
+    /// (Mon-Sun including today). Mon/Tue belong to the new week, so we
+    /// subtract 7 to reach the previous Mon..Sun.
+    private func priorWeekDates() -> [Date] {
+        var cal = Calendar(identifier: .iso8601)
+        cal.firstWeekday = 2
+        cal.timeZone = .current
+        let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)
+        guard let thisWeekMon = cal.date(from: comps) else { return [] }
+        let weekday = cal.component(.weekday, from: now)
+        // Sun = 1: the week we want IS this week (Mon..Sun, today included).
+        // Mon = 2 / Tue = 3: this is the new week; we want the prior (subtract 7).
+        let priorWeekMon: Date
+        if weekday == 1 {
+            priorWeekMon = thisWeekMon
+        } else {
+            guard let backOne = cal.date(byAdding: .day, value: -7, to: thisWeekMon) else { return [] }
+            priorWeekMon = backOne
+        }
+        return (0...6).compactMap { cal.date(byAdding: .day, value: $0, to: priorWeekMon) }
     }
 
     // MARK: - Gates
