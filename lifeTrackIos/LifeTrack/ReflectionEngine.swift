@@ -163,7 +163,7 @@ struct ReflectionEngine {
     // MARK: - Drift compute helpers
 
     private func completionDates(habit: Habit, lastNDays: Int) -> [Date] {
-        let cal = Calendar.current
+        let cal = Self.isoCalendar
         var dates: [Date] = []
         for offset in 0..<lastNDays {
             guard let d = cal.date(byAdding: .day, value: -offset, to: now) else { continue }
