@@ -31,6 +31,7 @@
 		AA00000000000000000000DE /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DD /* OnboardingView.swift */; };
 		AA00000000000000000000E0 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000DF /* HealthKitService.swift */; };
 		AA00000000000000000000E2 /* HabitDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E1 /* HabitDetailView.swift */; };
+		BB00000000000000000000B1 /* Reflection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A1 /* Reflection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +63,7 @@
 		AA00000000000000000000DD /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000DF /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
 		AA00000000000000000000E1 /* HabitDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitDetailView.swift; sourceTree = "<group>"; };
+		BB00000000000000000000A1 /* Reflection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reflection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,6 +121,7 @@
 				AA00000000000000000000DD /* OnboardingView.swift */,
 				AA00000000000000000000DF /* HealthKitService.swift */,
 				AA00000000000000000000E1 /* HabitDetailView.swift */,
+				BB00000000000000000000A1 /* Reflection.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -225,6 +228,7 @@
 				AA00000000000000000000DE /* OnboardingView.swift in Sources */,
 				AA00000000000000000000E0 /* HealthKitService.swift in Sources */,
 				AA00000000000000000000E2 /* HabitDetailView.swift in Sources */,
+				BB00000000000000000000B1 /* Reflection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
