@@ -92,12 +92,19 @@ struct ReflectionEngine {
 
     // MARK: - Weekly window
 
-    /// True when `now` is within Sunday 18:00 → Tuesday 23:59 (local time).
-    /// ISO calendar weekday: Sun=1, Mon=2, Tue=3.
-    private var isInWeeklyWindow: Bool {
+    /// Single ISO 8601 calendar (Monday-first, current TZ) used by all weekly
+    /// computations and `weekKey`. Centralised to avoid drift between sites.
+    static var isoCalendar: Calendar {
         var cal = Calendar(identifier: .iso8601)
         cal.firstWeekday = 2
         cal.timeZone = .current
+        return cal
+    }
+
+    /// True when `now` is within Sunday 18:00 → Tuesday 23:59 (local time).
+    /// ISO calendar weekday: Sun=1, Mon=2, Tue=3.
+    private var isInWeeklyWindow: Bool {
+        let cal = Self.isoCalendar
         let weekday = cal.component(.weekday, from: now)
         let hour = cal.component(.hour, from: now)
         if weekday == 1 && hour >= 18 { return true }
@@ -111,9 +118,7 @@ struct ReflectionEngine {
     /// (Mon-Sun including today). Mon/Tue belong to the new week, so we
     /// subtract 7 to reach the previous Mon..Sun.
     private func priorWeekDates() -> [Date] {
-        var cal = Calendar(identifier: .iso8601)
-        cal.firstWeekday = 2
-        cal.timeZone = .current
+        let cal = Self.isoCalendar
         let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)
         guard let thisWeekMon = cal.date(from: comps) else { return [] }
         let weekday = cal.component(.weekday, from: now)
@@ -172,11 +177,9 @@ struct ReflectionEngine {
         iso8601DateString(date)
     }
 
-    /// ISO week key, e.g. "2026-W18". Monday-first per ISO 8601.
+    /// ISO week key, e.g. "2026-W18". Monday-first per ISO 8601, current TZ.
     static func weekKey(_ date: Date) -> String {
-        var cal = Calendar(identifier: .iso8601)
-        cal.firstWeekday = 2  // Monday
-        let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+        let comps = isoCalendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
         return String(format: "%04d-W%02d", comps.yearForWeekOfYear ?? 0, comps.weekOfYear ?? 0)
     }
 }
