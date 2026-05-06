@@ -162,6 +162,79 @@ final class ReflectionEngineTests: XCTestCase {
         XCTAssertNil(engine.currentReflection())
     }
 
+    func testWeekly_sundayBefore1800_returnsNil() {
+        let store = TestStore.fresh(suite: defaults)
+        let sunEvening = TestDates.date(2026, 5, 3, hour: 17)  // Sunday 17:00 — before window opens
+        let createdAt = TestDates.calendar.date(byAdding: .day, value: -30, to: sunEvening)!
+        _ = TestStore.addHabit(store, name: "Run", createdAt: createdAt)
+
+        let engine = ReflectionEngine(store: store, now: sunEvening, defaults: defaults)
+        XCTAssertNil(engine.currentReflection())
+    }
+
+    func testWeekly_sundayAt1800_isInWindow() {
+        let store = TestStore.fresh(suite: defaults)
+        let sunEvening = TestDates.date(2026, 5, 3, hour: 18)  // Sunday 18:00 — window opens
+        let createdAt = TestDates.calendar.date(byAdding: .day, value: -30, to: sunEvening)!
+        _ = TestStore.addHabit(store, name: "Run", createdAt: createdAt)
+
+        let engine = ReflectionEngine(store: store, now: sunEvening, defaults: defaults)
+        guard case .weekly? = engine.currentReflection() else {
+            return XCTFail("expected .weekly at Sun 18:00")
+        }
+    }
+
+    func testWeekly_tuesdayLate_isInWindow() {
+        let store = TestStore.fresh(suite: defaults)
+        let tuesday2330 = TestDates.date(2026, 5, 5, hour: 23)  // Tuesday 23:00 — last hour of window
+        let createdAt = TestDates.calendar.date(byAdding: .day, value: -30, to: tuesday2330)!
+        _ = TestStore.addHabit(store, name: "Run", createdAt: createdAt)
+
+        let engine = ReflectionEngine(store: store, now: tuesday2330, defaults: defaults)
+        guard case .weekly? = engine.currentReflection() else {
+            return XCTFail("expected .weekly on Tuesday late")
+        }
+    }
+
+    func testDrift_irregularCadence_belowFloor_doesNotFire() {
+        // Habit done every other day for 60 days — median gap = 2, MAD = 0,
+        // threshold floor = med + 2 = 4. currentGap = 3 → must NOT fire.
+        let store = TestStore.fresh(suite: defaults)
+        let today = TestDates.date(2026, 5, 6)
+        let createdAt = TestDates.calendar.date(byAdding: .day, value: -60, to: today)!
+        let h = TestStore.addHabit(store, name: "Stretch", createdAt: createdAt)
+        // Mark on days -3, -5, -7, -9, ... up to -59. currentGap=3 (today−3=last).
+        var offset = 3
+        while offset <= 59 {
+            TestStore.mark(store, habit: h, on: TestDates.calendar.date(byAdding: .day, value: -offset, to: today)!)
+            offset += 2
+        }
+
+        let engine = ReflectionEngine(store: store, now: today, defaults: defaults)
+        XCTAssertNil(engine.currentReflection(), "currentGap=3 must not fire when threshold floor=4")
+    }
+
+    func testDrift_irregularCadence_aboveFloor_fires() {
+        // Same every-other-day cadence, but currentGap=5 (last completion 5 days ago) > floor 4.
+        let store = TestStore.fresh(suite: defaults)
+        let today = TestDates.date(2026, 5, 6)
+        let createdAt = TestDates.calendar.date(byAdding: .day, value: -60, to: today)!
+        let h = TestStore.addHabit(store, name: "Stretch", createdAt: createdAt)
+        // Mark on days -5, -7, -9, ... up to -59. currentGap=5.
+        var offset = 5
+        while offset <= 59 {
+            TestStore.mark(store, habit: h, on: TestDates.calendar.date(byAdding: .day, value: -offset, to: today)!)
+            offset += 2
+        }
+
+        let engine = ReflectionEngine(store: store, now: today, defaults: defaults)
+        guard case .drift(let habit, let days, _)? = engine.currentReflection() else {
+            return XCTFail("expected .drift at currentGap=5 above floor=4")
+        }
+        XCTAssertEqual(habit.id, h.id)
+        XCTAssertEqual(days, 5)
+    }
+
     func testWeekly_habitCreatedMidWeek_doesNotPenaliseDays() {
         let store = TestStore.fresh(suite: defaults)
         let mondayAfter = TestDates.date(2026, 5, 4)
