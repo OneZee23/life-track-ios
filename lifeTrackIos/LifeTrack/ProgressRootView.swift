@@ -29,6 +29,9 @@ struct ProgressRootView: View {
     @State private var detailHabit: Habit? = nil
     @State private var detailNoteDate: Date = Date()
 
+    // Reflection card re-evaluation trigger
+    @State private var reflectionTick = UUID()
+
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground).ignoresSafeArea()
@@ -36,6 +39,40 @@ struct ProgressRootView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     headerSection
+
+                    if (level == .month || level == .year), navSource == .normal {
+                        let engine = ReflectionEngine(store: store)
+                        if let reflection = engine.currentReflection() {
+                            ReflectionCard(
+                                reflection: reflection,
+                                onLinkTap: {
+                                    if case .drift(let habit, _, _) = reflection {
+                                        detailNoteDate = Date()
+                                        detailHabit = habit
+                                    }
+                                },
+                                onDismissForWeek: {
+                                    engine.dismissForWeek(reflection)
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        reflectionTick = UUID()
+                                    }
+                                },
+                                onDisableType: {
+                                    engine.disableType(reflection.type)
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        reflectionTick = UUID()
+                                    }
+                                }
+                            )
+                            .id(reflectionTick)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .onAppear {
+                                engine.recordShown(reflection)
+                            }
+                        }
+                    }
 
                     Group {
                         switch level {
