@@ -574,4 +574,108 @@ enum L10n {
         case .steps: return "👟"
         }
     }
+
+    // MARK: - Reflection
+
+    static var reflectionCaptionThisWeek: String {
+        isRu ? "Этой неделей" : "This week"
+    }
+
+    static var reflectionCaptionDrift: String {
+        isRu ? "Похоже, ритм просел" : "Pace has dipped"
+    }
+
+    static func reflectionDriftDailyShort(habitDisplay: String, days: Int, smaller: String) -> String {
+        if isRu {
+            return "\(days) тихих дней без \(habitDisplay). Может, завтра — \(smaller)?"
+        }
+        return "\(days) quiet days without \(habitDisplay). Want to try \(smaller) tomorrow?"
+    }
+
+    static func reflectionDriftDailyLong(habitDisplay: String, days: Int, smaller: String) -> String {
+        if isRu {
+            return "\(habitDisplay) молчит почти неделю. \(smaller.capitalizedFirst) — тоже считается."
+        }
+        return "It's been almost a week without \(habitDisplay). \(smaller.capitalizedFirst) still counts."
+    }
+
+    static func reflectionDriftWeekly(habitDisplay: String) -> String {
+        if isRu {
+            return "Прошлая неделя \(habitDisplay) не сложилась. На этой — даже один раз будет да."
+        }
+        return "Last week didn't happen for \(habitDisplay). This week, even one time is a yes."
+    }
+
+    static func reflectionDriftLink(habitDisplay: String) -> String {
+        if isRu {
+            return "Открыть \(habitDisplay)"
+        }
+        return "Open \(habitDisplay)"
+    }
+
+    static func reflectionWeeklyBucket(daysFullyDone: Int) -> String {
+        switch daysFullyDone {
+        case 7:
+            return isRu
+                ? "Семь дней подряд. Так и складываются ритмы."
+                : "Seven days. That's how rhythms get built."
+        case 5...6:
+            return isRu
+                ? "\(daysFullyDone) дней за неделю. Из таких недель и складывается."
+                : "\(daysFullyDone) days this week. That's the kind of week that adds up."
+        case 3...4:
+            return isRu
+                ? "Неделя вышла неровной. \(daysFullyDone) дней — уже что-то."
+                : "An uneven week. \(daysFullyDone) days is something."
+        case 1...2:
+            return isRu
+                ? "Неделя вышла рваной. Может, на следующей выбрать один день и защитить его?"
+                : "A patchy week. Want to pick one day next week and protect it?"
+        default:  // 0
+            return isRu
+                ? "Жизнь бывает и такой. Догонять ничего не надо — просто то, что окажется по силам дальше."
+                : "Life happens in weeks like this too. No catch-up needed — just whatever feels possible next."
+        }
+    }
+
+    static var reflectionHintLongPress: String {
+        isRu ? "Удержи, чтобы скрыть" : "Press and hold to hide"
+    }
+
+    static var reflectionDismissForWeek: String {
+        isRu ? "Скрыть на неделю" : "Hide for a week"
+    }
+
+    static var reflectionDismissForever: String {
+        isRu ? "Не показывать такие" : "Don't show these"
+    }
+
+    static var reflectionSettingsTitle: String {
+        isRu ? "Замечать спад и подводить итог недели" : "Notice drift and summarize the week"
+    }
+
+    static var reflectionSettingsSubtitle: String {
+        isRu ? "Один тихий блок в разделе Прогресс. Без пушей." : "One quiet block in the Progress tab. No pushes."
+    }
+
+    static var reflectionSmallestVariant: String {
+        isRu ? "самый маленький вариант" : "the smallest version"
+    }
+
+    static func reflectionSmallerNumeric(value: Double, unit: String) -> String {
+        let valueStr = value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(Int(value))
+            : String(format: "%.1f", value)
+        if isRu {
+            return "коротко, \(valueStr) \(unit)"
+        }
+        return "a short \(valueStr) \(unit)"
+    }
+}
+
+extension String {
+    var capitalizedFirst: String {
+        guard let f = first else { return self }
+        return String(f).uppercased() + dropFirst()
+    }
 }

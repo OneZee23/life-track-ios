@@ -33,6 +33,7 @@
 		AA00000000000000000000E2 /* HabitDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E1 /* HabitDetailView.swift */; };
 		BB00000000000000000000B1 /* Reflection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A1 /* Reflection.swift */; };
 		BB00000000000000000000B2 /* ReflectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A2 /* ReflectionEngine.swift */; };
+		BB00000000000000000000B3 /* ReflectionCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000000000000000000A3 /* ReflectionCopy.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -66,6 +67,7 @@
 		AA00000000000000000000E1 /* HabitDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitDetailView.swift; sourceTree = "<group>"; };
 		BB00000000000000000000A1 /* Reflection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reflection.swift; sourceTree = "<group>"; };
 		BB00000000000000000000A2 /* ReflectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionEngine.swift; sourceTree = "<group>"; };
+		BB00000000000000000000A3 /* ReflectionCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionCopy.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +127,7 @@
 				AA00000000000000000000E1 /* HabitDetailView.swift */,
 				BB00000000000000000000A1 /* Reflection.swift */,
 				BB00000000000000000000A2 /* ReflectionEngine.swift */,
+				BB00000000000000000000A3 /* ReflectionCopy.swift */,
 				AA00000000000000000000AF /* Assets.xcassets */,
 				AA00000000000000000000C5 /* Preview Content */,
 			);
@@ -233,6 +236,7 @@
 				AA00000000000000000000E2 /* HabitDetailView.swift in Sources */,
 				BB00000000000000000000B1 /* Reflection.swift in Sources */,
 				BB00000000000000000000B2 /* ReflectionEngine.swift in Sources */,
+				BB00000000000000000000B3 /* ReflectionCopy.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
