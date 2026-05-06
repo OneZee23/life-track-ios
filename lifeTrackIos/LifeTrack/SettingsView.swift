@@ -98,37 +98,6 @@ struct SettingsView: View {
                     .tint(Color(UIColor.systemGreen))
                 }
 
-                // Debug — TEMPORARY for v0.6.0 visual QA. Remove before v0.6.1.
-                Section {
-                    Toggle(isOn: Binding(
-                        get: { UserDefaults.standard.bool(forKey: ReflectionEngine.Keys.debugForceWeekly) },
-                        set: { UserDefaults.standard.set($0, forKey: ReflectionEngine.Keys.debugForceWeekly) }
-                    )) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("🐞 Debug: показать карточку «Сводки»")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.primary)
-                            Text("Обходит окно (Sun18-Tue), today-shown и weekly-seen. Open Progress to see the card.")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .tint(Color(UIColor.systemPurple))
-
-                    Button {
-                        let d = UserDefaults.standard
-                        d.removeObject(forKey: ReflectionEngine.Keys.todayShown)
-                        d.removeObject(forKey: ReflectionEngine.Keys.weeklySeen)
-                        d.removeObject(forKey: ReflectionEngine.Keys.hintShown)
-                    } label: {
-                        Text("Reset shown/seen/hint state")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color(UIColor.systemBlue))
-                    }
-                } header: {
-                    Text("Debug (remove before v0.6.1)")
-                }
-
                 // Onboarding
                 Section {
                     Button {
