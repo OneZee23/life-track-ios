@@ -118,7 +118,14 @@ struct ReflectionEngine {
 
         let med = median(gaps.map(Double.init))
         let mad = median(gaps.map { abs(Double($0) - med) })
-        let threshold = max(med + 3.0 * 1.4826 * mad, med + 2.0)
+        let maxGap = Double(gaps.max() ?? 0)
+        // Three floors:
+        //   med + 3·1.4826·MAD — statistical "unusual for this user" (Gaussian-like)
+        //   med + 2            — Clear's "never miss twice" rule, prevents fire on floor=1
+        //   maxGap + 1         — must EXCEED the largest historically-observed gap.
+        //                        Critical for weekend-skipper / bimodal cadences:
+        //                        if user normally has 3-day gaps (Fri→Mon), 3 is "normal".
+        let threshold = max(med + 3.0 * 1.4826 * mad, med + 2.0, maxGap + 1.0)
 
         guard let last = sorted.last,
               let currentGap = cal.dateComponents([.day], from: last, to: now).day else { return nil }

@@ -31,11 +31,15 @@ final class ReflectionEngineTests: XCTestCase {
     }
 
     func testDrift_dailyHabit_threeDayGap_fires() {
+        // Mark daily for 35 days ending 3 days ago → currentGap = 3.
+        // Threshold for perfect-daily: max(med+0, med+2, maxGap+1) = max(1,3,2) = 3.
+        // 3 < 3 is false → fires with days=3. (`days` is calendar-day diff
+        // since last completion, matching `dateComponents.day` semantics.)
         let store = TestStore.fresh(suite: defaults)
         let today = TestDates.date(2026, 5, 6)
         let createdAt = TestDates.calendar.date(byAdding: .day, value: -40, to: today)!
         let h = TestStore.addHabit(store, name: "Run", createdAt: createdAt)
-        for offset in 4...38 {
+        for offset in 3...37 {
             TestStore.mark(store, habit: h, on: TestDates.calendar.date(byAdding: .day, value: -offset, to: today)!)
         }
 
