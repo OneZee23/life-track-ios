@@ -197,14 +197,9 @@ struct HabitToggleCard: View {
                     }
                 }
                 if showsTotal {
-                    HStack(spacing: 3) {
-                        Text("∑")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Text("\(totalDays)")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.secondary)
-                    }
+                    Text("\(totalDays) \(L10n.cardTotalSuffix)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
                 }
             }
         }

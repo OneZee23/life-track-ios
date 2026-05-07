@@ -458,6 +458,8 @@ enum L10n {
     static var habitDetailPeriodYear: String { isRu ? "Год" : "Year" }
     static var habitDetailDays: String { isRu ? "д" : "d" }
     static var habitDetailTotalDays: String { isRu ? "Всего дней" : "Total days" }
+    /// Compact suffix for the inline "47 total" counter on the Check-in card.
+    static var cardTotalSuffix: String { isRu ? "всего" : "total" }
     // Count-habit specific
     static var habitDetailTotal: String { isRu ? "Всего" : "Total" }
     static var habitDetailBestDay: String { isRu ? "Лучший день" : "Best day" }
