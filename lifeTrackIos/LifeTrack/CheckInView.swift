@@ -146,6 +146,7 @@ struct CheckInView: View {
                                 habit: habit,
                                 value: currentValue,
                                 streak: streakForHabit(habit, date: date, isDone: habitDone),
+                                totalDays: store.habitTotalDaysCompleted(habitId: habit.id),
                                 hasNote: store.hasNote(habitId: habit.id, date: ds),
                                 onToggle: { toggle(habitId: habit.id) },
                                 onDecrement: { decrement(habitId: habit.id) },

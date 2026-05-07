@@ -5,6 +5,25 @@
 
 ---
 
+## [0.6.1] — 8 мая 2026
+
+### Added
+- **Общий счётчик «∑ всего дней»** — на карточке Check-in рядом со стриком (🔥) появилась вторая метрика — общее количество дней за всё время, когда привычка отмечалась выполненной. Подписчик буквально просил «помимо дней подряд показывать сколько всего дней я уже этим занимаюсь». Показ: только когда total ≥ 2 и total > streak (иначе шум). Если streak == 0, total всё равно виден — мотивация для привычек с расписанием
+- **Карточка «Всего дней» в HabitDetailView** — добавлена в stats grid (4-я карточка для binary habits в 2×2; 5-я для count habits). Локализована в `habitDetailTotalDays`
+
+### Changed
+- **Schedule-aware streaks** — стрики (`habitStreak`, `habitPerfectStreak`) теперь уважают расписание привычки: дни вне `habit.reminder.weekdays` пропускаются и не сбрасывают серию. **Раньше** Mon-Fri привычка сбрасывала стрик каждые выходные. **Теперь** в понедельник стрик продолжается с пятницы. Это применяется ко всем местам где `habitStreak` используется (CheckInView card, HabitDetailView header, YearAnalyticsView ranking).
+- **`HabitDetailData.bestStreak` тоже schedule-aware** — теперь использует `AppStore.habitBestSoftStreak()` (новый helper, walks all-time forward, skip non-scheduled days)
+- **`HabitToggleCard.totalDays` параметр** — добавлен новый параметр для отображения total counter
+
+### Added (helpers)
+- `DateUtils.isoWeekday(_ date: Date) -> Int` — конвертирует Date в ISO 8601 weekday (1=Mon … 7=Sun). Apple Calendar использует другой формат (1=Sun), shift в одном месте
+- `AppStore.habitTotalDaysCompleted(habitId:) -> Int` — общий счёт за всё время
+- `AppStore.habitBestSoftStreak(habitId:) -> Int` — best streak за всё время, schedule-aware
+- `AppStore.scheduledWeekdays(for:) -> Set<Int>?` (private) — единая точка получения расписания для streak helpers
+
+---
+
 ## [0.6.0] — 6 мая 2026
 
 ### Added

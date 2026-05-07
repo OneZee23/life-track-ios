@@ -457,6 +457,7 @@ enum L10n {
     static var habitDetailPeriod90d: String { isRu ? "90д" : "90d" }
     static var habitDetailPeriodYear: String { isRu ? "Год" : "Year" }
     static var habitDetailDays: String { isRu ? "д" : "d" }
+    static var habitDetailTotalDays: String { isRu ? "Всего дней" : "Total days" }
     // Count-habit specific
     static var habitDetailTotal: String { isRu ? "Всего" : "Total" }
     static var habitDetailBestDay: String { isRu ? "Лучший день" : "Best day" }

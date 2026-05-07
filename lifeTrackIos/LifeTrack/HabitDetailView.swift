@@ -39,12 +39,20 @@ struct HabitDetailView: View {
     // MARK: - Pre-computed detail data
 
     private var detailData: HabitDetailData {
+        let totalAllTime = store.habitTotalDaysCompleted(habitId: habit.id)
+        let bestSoftStreak = store.habitBestSoftStreak(habitId: habit.id)
         if isCount {
             let history = store.habitCountHistory(habitId: habit.id, days: selectedPeriod.rawValue)
-            return HabitDetailData(countHistory: history)
+            return HabitDetailData(countHistory: history,
+                                   totalAllTime: totalAllTime,
+                                   bestSoftStreak: bestSoftStreak)
         } else {
             let history = store.habitHistory(habitId: habit.id, days: selectedPeriod.rawValue)
-            return HabitDetailData(history: history, isSleep: habit.isSleep, unit: unit)
+            return HabitDetailData(history: history,
+                                   isSleep: habit.isSleep,
+                                   unit: unit,
+                                   totalAllTime: totalAllTime,
+                                   bestSoftStreak: bestSoftStreak)
         }
     }
 
@@ -54,7 +62,7 @@ struct HabitDetailView: View {
         let avg: Double?
         let min: Double?
         let max: Double?
-        let bestStreak: Int
+        let bestStreak: Int       // schedule-aware all-time best (≥ 1)
         let completion: Int
 
         // Count path
@@ -66,18 +74,22 @@ struct HabitDetailView: View {
         let overflowDays: Int
         let countCompletion: Int   // sum(value) / sum(target) clamped to 100
 
-        init(history: [(date: String, done: Bool, value: Double?)], isSleep: Bool, unit: String) {
+        // Cross-cutting (both paths)
+        let totalAllTime: Int
+
+        init(history: [(date: String, done: Bool, value: Double?)],
+             isSleep: Bool,
+             unit: String,
+             totalAllTime: Int,
+             bestSoftStreak: Int) {
             self.history = history
             let values = history.compactMap(\.value)
             self.avg = values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
             self.min = values.min()
             self.max = values.max()
 
-            var best = 0, cur = 0
-            for entry in history.reversed() {
-                if entry.done { cur += 1; best = Swift.max(best, cur) } else { cur = 0 }
-            }
-            self.bestStreak = best
+            // bestStreak comes from schedule-aware AppStore helper (covers all-time, not just selected period).
+            self.bestStreak = bestSoftStreak
 
             let doneCount = history.filter(\.done).count
             self.completion = history.isEmpty ? 0 : Int(Double(doneCount) / Double(history.count) * 100)
@@ -89,13 +101,17 @@ struct HabitDetailView: View {
             self.perfectDays = 0
             self.overflowDays = 0
             self.countCompletion = 0
+            self.totalAllTime = totalAllTime
         }
 
-        init(countHistory: [(date: String, value: Int, target: Int)]) {
+        init(countHistory: [(date: String, value: Int, target: Int)],
+             totalAllTime: Int,
+             bestSoftStreak: Int) {
             self.countHistory = countHistory
             self.history = []
             self.avg = nil; self.min = nil; self.max = nil
-            self.bestStreak = 0; self.completion = 0
+            self.bestStreak = bestSoftStreak
+            self.completion = 0
 
             let values = countHistory.map(\.value)
             self.countSum = values.reduce(0, +)
@@ -112,6 +128,7 @@ struct HabitDetailView: View {
             self.countCompletion = totalTarget > 0
                 ? Int(Double(countSum) / Double(totalTarget) * 100)
                 : 0
+            self.totalAllTime = totalAllTime
         }
     }
 
@@ -324,6 +341,9 @@ struct HabitDetailView: View {
                                     : nil)
                     }
                     HStack(spacing: 8) {
+                        statCard(label: L10n.habitDetailTotalDays,
+                                 value: "\(data.totalAllTime)\(L10n.habitDetailDays)",
+                                 accent: .systemGreen)
                         statCard(label: L10n.habitDetailCompletion,
                                  value: "\(data.countCompletion)%",
                                  accent: .systemGreen)
@@ -340,10 +360,17 @@ struct HabitDetailView: View {
                 }
             } else {
                 let streak = store.habitStreak(habitId: habit.id, asOf: Date())
-                HStack(spacing: 8) {
-                    statCard(label: L10n.habitDetailStreak, value: "\(streak)\(L10n.habitDetailDays)")
-                    statCard(label: L10n.habitDetailBestStreak, value: "\(data.bestStreak)\(L10n.habitDetailDays)")
-                    statCard(label: L10n.habitDetailCompletion, value: "\(data.completion)%")
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        statCard(label: L10n.habitDetailStreak, value: "\(streak)\(L10n.habitDetailDays)")
+                        statCard(label: L10n.habitDetailBestStreak, value: "\(data.bestStreak)\(L10n.habitDetailDays)")
+                    }
+                    HStack(spacing: 8) {
+                        statCard(label: L10n.habitDetailTotalDays,
+                                 value: "\(data.totalAllTime)\(L10n.habitDetailDays)",
+                                 accent: .systemGreen)
+                        statCard(label: L10n.habitDetailCompletion, value: "\(data.completion)%")
+                    }
                 }
             }
         }

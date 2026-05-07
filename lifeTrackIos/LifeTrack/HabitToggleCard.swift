@@ -4,6 +4,7 @@ struct HabitToggleCard: View {
     let habit: Habit
     let value: Int
     let streak: Int
+    let totalDays: Int
     let hasNote: Bool
     let onToggle: () -> Void
     let onDecrement: () -> Void
@@ -173,17 +174,40 @@ struct HabitToggleCard: View {
                             .frame(width: 72 * CGFloat(progress), height: 4)
                     }
                 }
-            } else if streak >= 2 {
-                HStack(spacing: 3) {
-                    Text("🔥")
-                        .font(.system(size: 11))
-                    Text("\(streak) \(L10n.pluralDays(streak))")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Color(UIColor.systemOrange))
-                }
+            } else {
+                streakAndTotalRow
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var streakAndTotalRow: some View {
+        let showsStreak = streak >= 2
+        let showsTotal  = totalDays >= 2 && totalDays > streak
+        if showsStreak || showsTotal {
+            HStack(spacing: 8) {
+                if showsStreak {
+                    HStack(spacing: 3) {
+                        Text("🔥")
+                            .font(.system(size: 11))
+                        Text("\(streak)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color(UIColor.systemOrange))
+                    }
+                }
+                if showsTotal {
+                    HStack(spacing: 3) {
+                        Text("∑")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        Text("\(totalDays)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
     }
 
     private var indicator: some View {

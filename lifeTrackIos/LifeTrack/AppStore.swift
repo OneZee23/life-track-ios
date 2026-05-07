@@ -360,15 +360,23 @@ class AppStore: ObservableObject {
     }
 
     /// Walks consecutive days backwards from `date`, counting while `predicate`
-    /// holds. Single source of truth for both the soft streak (`>= 1`) and
-    /// the perfect-day streak (`>= target`).
+    /// holds. Days outside the habit's reminder schedule are SKIPPED (neither
+    /// counted nor breaking the streak) — so a Mon-Fri habit no longer resets
+    /// every weekend. Single source of truth for both the soft streak
+    /// (`>= 1`) and the perfect-day streak (`>= target`).
     private func habitStreakWhere(habitId: String,
                                   asOf date: Date,
                                   predicate: (Int) -> Bool) -> Int {
         let cal = Calendar.current
+        let scheduledWeekdays = scheduledWeekdays(for: habitId)
         var streak = 0
         var d = date
         while true {
+            if let weekdays = scheduledWeekdays, !weekdays.contains(isoWeekday(d)) {
+                guard let prev = cal.date(byAdding: .day, value: -1, to: d) else { break }
+                d = prev
+                continue
+            }
             let ds = formatDate(d)
             guard let v = checkins[ds]?[habitId], predicate(v) else { break }
             streak += 1
@@ -376,6 +384,62 @@ class AppStore: ObservableObject {
             d = prev
         }
         return streak
+    }
+
+    /// Returns the habit's scheduled weekday set, or nil if it tracks every day.
+    /// `nil` means "any day counts"; a non-empty set means "only these ISO weekdays count".
+    private func scheduledWeekdays(for habitId: String) -> Set<Int>? {
+        guard let habit = habits.first(where: { $0.id == habitId }),
+              let reminder = habit.reminder,
+              !reminder.weekdays.isEmpty,
+              reminder.weekdays.count < 7
+        else { return nil }
+        return reminder.weekdays
+    }
+
+    /// Total number of days, all-time, where this habit was checked in
+    /// (value ≥ 1). Doesn't account for habit's schedule — it's a raw count
+    /// of completion days, which is the more useful "long-term commitment"
+    /// metric to show alongside the streak.
+    func habitTotalDaysCompleted(habitId: String) -> Int {
+        var count = 0
+        for (_, dayData) in checkins {
+            if (dayData[habitId] ?? 0) >= 1 { count += 1 }
+        }
+        return count
+    }
+
+    /// Best (longest) soft streak the habit ever had, schedule-aware.
+    /// Walks all known check-ins forward, tracking the longest run of
+    /// consecutive scheduled days where value ≥ 1.
+    func habitBestSoftStreak(habitId: String) -> Int {
+        let cal = Calendar.current
+        let scheduledWeekdays = scheduledWeekdays(for: habitId)
+
+        let dateStrings = checkins.keys.sorted()
+        guard let firstStr = dateStrings.first,
+              let firstDate = parseDate(firstStr) else { return 0 }
+        let today = cal.startOfDay(for: Date())
+
+        var best = 0, cur = 0
+        var d = cal.startOfDay(for: firstDate)
+        while d <= today {
+            if let weekdays = scheduledWeekdays, !weekdays.contains(isoWeekday(d)) {
+                guard let next = cal.date(byAdding: .day, value: 1, to: d) else { break }
+                d = next
+                continue
+            }
+            let ds = formatDate(d)
+            if let v = checkins[ds]?[habitId], v >= 1 {
+                cur += 1
+                if cur > best { best = cur }
+            } else {
+                cur = 0
+            }
+            guard let next = cal.date(byAdding: .day, value: 1, to: d) else { break }
+            d = next
+        }
+        return best
     }
 
     // MARK: - Daily greeting

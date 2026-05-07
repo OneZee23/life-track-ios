@@ -19,6 +19,14 @@ func isoToAppleWeekday(_ iso: Int) -> Int {
     (iso % 7) + 1
 }
 
+/// Returns ISO 8601 weekday (1=Mon … 7=Sun) for a given Date.
+/// Apple's `Calendar` uses 1=Sun … 7=Sat, so we shift.
+func isoWeekday(_ date: Date) -> Int {
+    let appleWeekday = Calendar.current.component(.weekday, from: date)
+    // appleWeekday: 1=Sun … 7=Sat → ISO: 1=Mon … 7=Sun
+    return ((appleWeekday + 5) % 7) + 1
+}
+
 // MARK: - Formatter
 
 private let _dateFormatter: DateFormatter = {
