@@ -186,7 +186,7 @@ struct HabitToggleCard: View {
         let showsStreak = streak >= 2
         let showsTotal  = totalDays >= 2 && totalDays > streak
         if showsStreak || showsTotal {
-            HStack(spacing: 8) {
+            HStack(spacing: 5) {
                 if showsStreak {
                     HStack(spacing: 3) {
                         Text("🔥")
@@ -197,9 +197,12 @@ struct HabitToggleCard: View {
                     }
                 }
                 if showsTotal {
-                    Text("\(totalDays) \(L10n.cardTotalSuffix)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.secondary)
+                    // Subtler than the streak: smaller, regular weight,
+                    // tertiary tone, parenthesised — quiet "long-term
+                    // context" that doesn't compete with the streak.
+                    Text("(\(totalDays))")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(UIColor.tertiaryLabel))
                 }
             }
         }
